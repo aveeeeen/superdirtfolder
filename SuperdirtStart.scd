@@ -56,3 +56,26 @@ SynthDef(\perc2, {| out, pan, freq = 60, pDur = 0.01, pRate = 2, amp = 1, attack
 	)
 }).add;
 )
+
+Synth(\perc2);
+
+(
+SynthDef(\fmperc, {| out, pan, freq = 40, modRate = 2, index = 0.5, pAtk = 0.0001, pDur = 0.05, pRate = 4, amp = 0.8, attack = 0.0001, release = 2, curveRate = 4|
+	var env = EnvGen.kr(Env.perc(attack, release, curve: (-1.0 * curveRate)), doneAction: 2);
+	var pEnv = EnvGen.kr(Env.perc(pAtk, pDur, pRate));
+	var mod = SinOsc.ar(
+		freq * modRate * (2 + pEnv),
+		0,
+		freq * modRate * (index));
+
+	var car = SinOsc.ar(
+		(freq + mod) * (1 + pEnv) ,
+		0,
+		amp) * env;
+	OffsetOut.ar(out,
+		DirtPan.ar(car, ~dirt.numChannels, pan, env)
+	)
+}).add
+)
+
+Synth(\fmkik, [pRate: 4, index: 1, freq: 40, pDur: 0.05, curveRate: 4, modRate: 0.7 , release: 3])
