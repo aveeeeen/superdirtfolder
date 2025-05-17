@@ -1,4 +1,5 @@
 (
+
 SynthDef(\perc2, {| out, pan, freq = 60, plen = 0.01, prate = 2, amp = 1, attack = 0.05, release = 2|
 	var pEnv = Line.kr(freq * prate ,freq, plen);
 	var click_pEnv = Line.kr(1000 ,freq, plen);
@@ -13,11 +14,7 @@ SynthDef(\perc2, {| out, pan, freq = 60, plen = 0.01, prate = 2, amp = 1, attack
 		DirtPan.ar(outnode, ~dirt.numChannels, pan, env)
 	)
 }).add;
-)
 
-Synth(\perc2);
-
-(
 SynthDef(\fmkik, {| out, pan, freq = 40, modRate = 1, index = 0.5, patk = 0.001, plen = 0.07, prate = 8, amp = 1.5, attack = 0.001, len = 1, curveRate = 4|
 	var env = EnvGen.kr(Env.perc(attack, len, curve: (-1.0 * curveRate)), doneAction: 2);
 	var modEnv = EnvGen.kr(Env.perc(attack, len, index));
@@ -63,8 +60,8 @@ SynthDef(\fmsn, {| out, pan, freq = 40, modRate = 3, index = 0.5, patk = 0.01, p
 	)
 }).add;
 
-SynthDef(\fmperc, {| out, pan, freq = 40, modRate = 2, index = 0.5, patk = 0.0001, plen = 0.05, prate = 4, amp = 0.8, attack = 0.0001, release = 2, curveRate = 4|
-	var env = EnvGen.kr(Env.perc(attack, release, curve: (-1.0 * curveRate)), doneAction: 2);
+SynthDef(\fmperc, {| out, pan, freq = 40, modRate = 2, index = 0.5, patk = 0.0001, plen = 0.05, prate = 4, amp = 0.8, attack = 0.0001, len = 2, curveRate = 4|
+	var env = EnvGen.kr(Env.perc(attack, len, curve: (-1.0 * curveRate)), doneAction: 2);
 	var pEnv = EnvGen.kr(Env.perc(patk, plen, prate));
 	var mod = SinOsc.ar(
 		freq * modRate * (2 + pEnv),
@@ -80,5 +77,22 @@ SynthDef(\fmperc, {| out, pan, freq = 40, modRate = 2, index = 0.5, patk = 0.000
 	)
 }).add;
 
+SynthDef(\modsaw, {| out, pan, freq = 440, attack = 0.01, len = 2, amp = 0.9, prate = 2 , plen = 0.001 , q = 0.1, cutoff = 6000|
+	var env = EnvGen.kr(Env.perc(attack, len), doneAction: 2);
+	var pEnv = EnvGen.kr(Env.perc(0.001, plen, prate));
+	var saw = Saw.ar(
+		(freq) * (pEnv + 1)
+		,SinOsc.kr(freq:SinOsc.kr(freq:SinOsc.kr(freq,0.75), phase: 0.25), phase: 0.5) * 1
+	) * env;
+	var outnode = HPF.ar(RLPF.ar(saw , XLine.kr(cutoff, 20, len), ( 0.01 + 1 - q )), 30);
+	OffsetOut.ar(out,
+		DirtPan.ar(outnode, ~dirt.numChannels, pan, env)
+	);
+}).add;
+
 )
+
+Synth(\weird,[freq: [].choose, len: 3, rez: 0.5]);
+
+
 
