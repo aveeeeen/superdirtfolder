@@ -82,6 +82,24 @@ SynthDef(\fmfilter, {| out, pan, freq = 40, modRate = 1, index = 1, patk = 0.001
 	)
 }).add;
 
+SynthDef(\fmsaw, {| out, pan, freq = 40, modRate = 1, index = 1, patk = 0.001, plen = 0.01, prate = 4, amp = 0.9, atk = 0.001, len = 1, curveRate = 4, cutoff = 8000, q = 0.1|
+	var env = EnvGen.kr(Env.perc(atk, len, curve: (-1.0 * curveRate)), doneAction: 2);
+	var modEnv = EnvGen.kr(Env.perc(atk, len, index));
+	var pEnv = EnvGen.kr(Env.perc(patk, plen, prate));
+	var mod = LFSaw.ar(
+		freq * modRate * (1 + pEnv) ,
+		mul: freq * modRate) * modEnv;
+
+	var car = SinOsc.ar(
+		freq + mod * (1 + pEnv),
+		mul: amp) * env;
+
+	var outnode = RLPF.ar(car , XLine.kr(cutoff, 20, len), ( 0.01 + 1 - q ));
+	OffsetOut.ar(out,
+		DirtPan.ar(outnode, ~dirt.numChannels, pan, env)
+	)
+}).add;
+
 SynthDef(\fmperc, {| out, pan, freq = 40, modRate = 2, index = 0.5, patk = 0.0001, plen = 0.05, prate = 4, amp = 0.9, atk = 0.0001, len = 2, curveRate = 4|
 	var env = EnvGen.kr(Env.perc(atk, len, curve: (-1.0 * curveRate)), doneAction: 2);
 	var pEnv = EnvGen.kr(Env.perc(patk, plen, prate));
