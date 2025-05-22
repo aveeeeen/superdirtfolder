@@ -16,15 +16,15 @@ SynthDef(\perc2, {| out, pan, freq = 60, plen = 0.01, prate = 2, amp = 0.9, atk 
 	)
 }).add;
 
-SynthDef(\sinpad, {| out, pan, freq = 60, plen = 0.01, prate = 2, amp = 0.9, atk = 0.01, len = 2, sus = 1|
+SynthDef(\sinpad, {| out, pan, freq = 60, plen = 0.01, prate = 2, amp = 0.9, atk = 0.01, len = 2, sust = 1|
 	var pEnv = Line.kr(freq * prate ,freq, plen);
-	var env = EnvGen.kr(Env.adsr(atk, len, sus, 0.1, curve: -6), doneAction: 2);
+	var env = EnvGen.kr(Env.adsr(atk, len, sust, 0.1, curve: -6), doneAction: 2);
 	var amplfoL = SinOsc.kr(1.2, mul: 0.3);
 	var amplfoR = SinOsc.kr(0.8, mul: 0.3);
 	var oscamp = 0.2;
 	var mainOsc = [
-		((SinOsc.ar(pEnv, 0.0, mul: oscamp) * env) + (SinOsc.ar(pEnv * 0.75, 0.2, mul: oscamp * 0.8) * env)) * (0.1 + amplfoL),
-		((SinOsc.ar(pEnv, 1, mul: oscamp) * env) + (SinOsc.ar(pEnv * 0.5, 0.7, mul: oscamp) * env)) * (0.1 + amplfoR)
+		((SinOsc.ar(pEnv, 0.0, mul: oscamp) * env) + (SinOsc.ar(pEnv * 0.75, 0.2, mul: oscamp * 0.8) * env)) * (0.2 + amplfoL),
+		((SinOsc.ar(pEnv, 1, mul: oscamp) * env) + (SinOsc.ar(pEnv * 0.5, 0.7, mul: oscamp) * env)) * (0.2 + amplfoR)
 	];
 	var outnode = mainOsc;
 	OffsetOut.ar(out,
@@ -183,6 +183,26 @@ SynthDef(\modsaw, {| out, pan, freq = 440, atk = 0.01, len = 2, amp = 0.9, prate
 		DirtPan.ar(outnode, ~dirt.numChannels, pan, env)
 	);
 }).add;
+
+SynthDef(\detsaw, {| out, pan, freq = 440, atk = 0.01, len = 2, sust = 1, amp = 0.9, prate = 2 , plen = 0.001 , q = 0.1, detune = 0.1, cutoff = 6000, cutoffspd = 0|
+	var env = EnvGen.kr(Env.adsr(atk, len, sust) , doneAction: 2);
+	var pEnv = EnvGen.kr(Env.perc(0.001, plen, prate));
+	var sawL = Saw.ar(
+		(freq) * (pEnv + 1) + (1 * detune)
+		, phase: 0.5) * 1.3
+	) * env;
+
+	var sawR = Saw.ar(
+		(freq) * (pEnv + 1) - (1 * detune)
+		, phase: 0.5) * 1.3
+	) * env;
+
+	var outnode = RLPF.ar([sawL,sawR] , XLine.kr(cutoff, 20, len), ( 0.01 + 1 - q ));
+	OffsetOut.ar(out,
+		DirtPan.ar(outnode, ~dirt.numChannels, pan, env)
+	);
+}).add;
+
 
 SynthDef(\chirp, {| out, pan, freq = 40, atk = 0.001, len = 2, amp = 0.9, prate = 300 , plen = 0.1 , q = 0.5, cutoff = 12000, cutoffspd = 0|
 	var env = EnvGen.kr(Env.perc(atk, len, curve: -7), doneAction: 2);
