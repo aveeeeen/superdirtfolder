@@ -16,6 +16,22 @@ SynthDef(\perc2, {| out, pan, freq = 60, plen = 0.01, prate = 2, amp = 0.9, atk 
 	)
 }).add;
 
+SynthDef(\sinpad, {| out, pan, freq = 60, plen = 0.01, prate = 2, amp = 0.9, atk = 0.01, len = 2, sus = 1|
+	var pEnv = Line.kr(freq * prate ,freq, plen);
+	var env = EnvGen.kr(Env.adsr(atk, len, sus, 0.1, curve: -6), doneAction: 2);
+	var amplfoL = SinOsc.kr(1.2, mul: 0.3);
+	var amplfoR = SinOsc.kr(0.8, mul: 0.3);
+	var oscamp = 0.2;
+	var mainOsc = [
+		((SinOsc.ar(pEnv, 0.0, mul: oscamp) * env) + (SinOsc.ar(pEnv * 0.75, 0.2, mul: oscamp * 0.8) * env)) * (0.1 + amplfoL),
+		((SinOsc.ar(pEnv, 1, mul: oscamp) * env) + (SinOsc.ar(pEnv * 0.5, 0.7, mul: oscamp) * env)) * (0.1 + amplfoR)
+	];
+	var outnode = mainOsc;
+	OffsetOut.ar(out,
+		DirtPan.ar(outnode, ~dirt.numChannels, pan, env)
+	)
+}).add;
+
 SynthDef(\fmkik, {| out, pan, freq = 40, modRate = 1, index = -1, patk = 0.001, plen = 0.07, prate = 16, amp = 0.9, atk = 0.001, len = 1, curveRate = 4, contour = 1|
 	var env = EnvGen.kr(Env.perc(atk, len, curve: (-1.0 * curveRate)), doneAction: 2);
 	var modEnv = EnvGen.kr(Env.perc(atk, len, 1 * contour));
