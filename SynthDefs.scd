@@ -184,17 +184,15 @@ SynthDef(\modsaw, {| out, pan, freq = 440, atk = 0.01, len = 2, amp = 0.9, prate
 	);
 }).add;
 
-SynthDef(\detsaw, {| out, pan, freq = 440, atk = 0.01, len = 2, sust = 1, amp = 0.9, prate = 2 , plen = 0.001 , q = 0.1, detune = 0.1, cutoff = 6000, cutoffspd = 0|
+SynthDef(\detsaw, {| out, pan, freq = 440, atk = 0.01, len = 2, sust = 1, amp = 0.9, prate = 0 , plen = 0.001 , q = 0.1, detune = 0.1, cutoff = 6000, cutoffspd = 0|
 	var env = EnvGen.kr(Env.adsr(atk, len, sust) , doneAction: 2);
 	var pEnv = EnvGen.kr(Env.perc(0.001, plen, prate));
 	var sawL = Saw.ar(
 		(freq) * (pEnv + 1) + (1 * detune)
-		, phase: 0.5) * 1.3
 	) * env;
 
 	var sawR = Saw.ar(
 		(freq) * (pEnv + 1) - (1 * detune)
-		, phase: 0.5) * 1.3
 	) * env;
 
 	var outnode = RLPF.ar([sawL,sawR] , XLine.kr(cutoff, 20, len), ( 0.01 + 1 - q ));
