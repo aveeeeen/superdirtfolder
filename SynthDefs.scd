@@ -136,7 +136,7 @@ SynthDef(\fmfilter, {| out, pan, freq = 40, modRate = 1, index = 1, patk = 0.001
 	)
 }).add;
 
-SynthDef(\fmpad, {| out, pan, freq = 40, modRate = 0.5, index = 1, patk = 0.001, plen = 0.0001, prate = 2, amp = 0.8, atk = 0.001, len = 4, sust = 1, detune = 0.1, curveRate = 4, cutoff = 2000, q = 0.1|
+SynthDef(\fmpad, {| out, pan, freq = 40, modRate = 0.5, index = 1, patk = 0.001, plen = 0.0001, prate = 4, amp = 0.8, atk = 0.01, len = 4, sust = 1, detune = 0.1, curveRate = 4, cutoff = 2000, q = 0.1|
 	var env = EnvGen.kr(Env.adsr(atk, len, sust) , doneAction: 2);
 	var modEnv = EnvGen.kr(Env.perc(atk, len, index));
 	var pEnv = EnvGen.kr(Env.perc(patk, plen, prate));
