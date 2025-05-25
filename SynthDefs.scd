@@ -270,6 +270,25 @@ SynthDef(\chirp2, {| out, pan, freq = 40, atk = 0.01, len = 1, amp = 0.9, prate 
 	);
 }).add;
 
+
+
+SynthDef(\mplk, {| out, pan, freq = 440, atk = 0.01, len = 4, amp = 0.9, prate = 4 , plen = 0.01 |
+	var snd;
+	var basefreqs = [472, 953, 1423, 2378, 2920, 3401, 3877, 4332];
+	var ratio = basefreqs.size.collect({|i|
+		(basefreqs[i] / basefreqs[0]);
+	});
+
+	var env = EnvGen.kr(Env.perc(atk, len), doneAction: 2);
+	var pEnv = EnvGen.kr(Env.perc(0.0001, plen, prate));
+	snd = Klang.ar(`[ratio, Array.fill(basefreqs.size, {|i| (1 / basefreqs.size).pow(0.6)}), nil], freq);
+	snd = snd / basefreqs.size * env;
+	snd = snd + SinOsc.ar(freq * (1 + pEnv), mul: 0.2);
+	OffsetOut.ar(out,
+		DirtPan.ar(snd, ~dirt.numChannels, pan, env)
+	);
+}).add;
+
 )
 
 Synth(\fmkik,[ len: 3, rez: 0.5]);
