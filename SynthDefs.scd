@@ -32,13 +32,13 @@ SynthDef(\sinpad, {| out, pan, freq = 60, plen = 0.01, prate = 2, amp = 0.9, atk
 	)
 }).add;
 
-SynthDef(\fmkik, {| out, pan, freq = 40, modRate = 1, index = -1, patk = 0.001, plen = 0.07, prate = 16, amp = 0.9, atk = 0.001, len = 1, curveRate = 4, contour = 1|
+SynthDef(\fmkik, {| out, pan, freq = 40, modrate = 1, index = -1, patk = 0.001, plen = 0.07, prate = 16, amp = 0.9, atk = 0.001, len = 1, curveRate = 4, contour = 1|
 	var env = EnvGen.kr(Env.perc(atk, len, curve: (-1.0 * curveRate)), doneAction: 2);
 	var modEnv = EnvGen.kr(Env.perc(atk, len, 1 * contour));
 	var pEnv = EnvGen.kr(Env.perc(patk, plen, prate));
 	var mod = SinOsc.ar(
-		freq * modRate * (1 + pEnv),
-		mul: freq * modRate * index) * modEnv;
+		freq * modrate * (1 + pEnv),
+		mul: freq * modrate * index) * modEnv;
 
 	var car = SinOsc.ar(
 		(freq + mod) * (1 + pEnv) ,
@@ -50,14 +50,14 @@ SynthDef(\fmkik, {| out, pan, freq = 40, modRate = 1, index = -1, patk = 0.001, 
 	)
 }).add;
 
-SynthDef(\fmkik2, {| out, pan, freq = 21, modRate = 1.5, index = 5, patk = 0.01, plen = 0.1, prate = 4, amp = 0.9, atk = 0.01, len = 1, curveRate = 7, contour = 1|
+SynthDef(\fmkik2, {| out, pan, freq = 21, modrate = 1.5, index = 5, patk = 0.01, plen = 0.1, prate = 4, amp = 0.9, atk = 0.01, len = 1, curveRate = 7, contour = 1|
 	var cr = -1.0 * curveRate;
 	var env = EnvGen.kr(Env.perc(atk, len, curve: cr), doneAction: 2);
 	var modEnv = EnvGen.kr(Env.perc(atk, len, 1 * contour));
 	var pEnv = EnvGen.kr(Env.perc(patk, plen, prate));
 	var mod = LFSaw.ar(
-		freq * modRate * (1 + pEnv),
-		mul: freq * modRate * index) * (modEnv);
+		freq * modrate * (1 + pEnv),
+		mul: freq * modrate * index) * (modEnv);
 
 	var car = SinOsc.ar(
 		(freq + mod) * (1 + pEnv) ,
@@ -71,15 +71,15 @@ SynthDef(\fmkik2, {| out, pan, freq = 21, modRate = 1.5, index = 5, patk = 0.01,
 	)
 }).add;
 
-SynthDef(\fmsn, {| out, pan, freq = 40, modRate = 3, index = 0.5, patk = 0.01, plen = 0.15, prate = 8, amp = 0.9, atk = 0.01, len = 0.7, noiseamp = 0.5, curveRate = 4|
+SynthDef(\fmsn, {| out, pan, freq = 40, modrate = 3, index = 0.5, patk = 0.01, plen = 0.15, prate = 8, amp = 0.9, atk = 0.01, len = 0.7, noiseamp = 0.5, curveRate = 4|
 	var env = EnvGen.kr(Env.perc(atk, len, curve: (-1.0 * curveRate)), doneAction: 2);
 	var modEnv = EnvGen.kr(Env.perc(atk, len, index));
 	var pEnv = EnvGen.kr(Env.perc(patk, plen, prate));
 
 	var mod = Pulse.ar(
-		freq * modRate * (1 + pEnv),
+		freq * modrate * (1 + pEnv),
 		0.5,
-		freq * modRate * (1 + modEnv)
+		freq * modrate * (1 + modEnv)
 	);
 
 	var car = SinOsc.ar(
@@ -96,13 +96,13 @@ SynthDef(\fmsn, {| out, pan, freq = 40, modRate = 3, index = 0.5, patk = 0.01, p
 	)
 }).add;
 
-SynthDef(\fmsn2, {| out, pan, freq = 21, modRate = 6, index = 13, patk = 0.02, plen = 0.2, prate = 3, amp = 0.9, atk = 0.01, len = 1, curveRate = 8, contour = 0.7|
+SynthDef(\fmsn2, {| out, pan, freq = 21, modrate = 6, index = 13, patk = 0.02, plen = 0.2, prate = 3, amp = 0.9, atk = 0.01, len = 1, curveRate = 8, contour = 0.7|
 	var env = EnvGen.kr(Env.perc(atk, len, curve: (-1.0 * curveRate)), doneAction: 2);
 	var modEnv = EnvGen.kr(Env.perc(atk, len, 1 * contour));
 	var pEnv = EnvGen.kr(Env.perc(patk, plen, prate, curve: -10));
 	var mod = LFTri.ar(
-		freq * modRate * (1 + pEnv),
-		mul: freq * modRate * index) * (modEnv);
+		freq * modrate * (1 + pEnv),
+		mul: freq * modrate * index) * (modEnv);
 
 	var car = LFPulse.ar(
 		(freq + mod) * (1 + pEnv) ,
@@ -116,14 +116,14 @@ SynthDef(\fmsn2, {| out, pan, freq = 21, modRate = 6, index = 13, patk = 0.02, p
 	)
 }).add;
 
-SynthDef(\fmfilter, {| out, pan, freq = 40, modRate = 1, index = 1, patk = 0.001, plen = 0.05, prate = 4, amp = 0.9, atk = 0.001, len = 1, curveRate = 4, cutoff = 8000, q = 0.1|
+SynthDef(\fmfilter, {| out, pan, freq = 40, modrate = 1, index = 1, patk = 0.001, plen = 0.05, prate = 4, amp = 0.9, atk = 0.001, len = 1, curveRate = 4, cutoff = 8000, q = 0.1|
 	var env = EnvGen.kr(Env.perc(atk, len, curve: (-1.0 * curveRate)), doneAction: 2);
 	var modEnv = EnvGen.kr(Env.perc(atk, len, index));
 	var pEnv = EnvGen.kr(Env.perc(patk, plen, prate));
 	var mod = SinOsc.ar(
-		freq * modRate * (1 + pEnv),
+		freq * modrate * (1 + pEnv),
 		0,
-		freq * modRate * (index));
+		freq * modrate * (index));
 
 	var car = SinOsc.ar(
 		(freq + mod) * (1 + pEnv) ,
@@ -136,14 +136,14 @@ SynthDef(\fmfilter, {| out, pan, freq = 40, modRate = 1, index = 1, patk = 0.001
 	)
 }).add;
 
-SynthDef(\fmpad, {| out, pan, freq = 40, modRate = 0.5, index = 1, patk = 0.001, plen = 0.0001, prate = 4, amp = 0.8, atk = 0.01, len = 4, sust = 1, detune = 0.1, curveRate = 4, cutoff = 2000, q = 0.1|
+SynthDef(\fmpad, {| out, pan, freq = 40, modrate = 0.5, index = 1, patk = 0.001, plen = 0.0001, prate = 4, amp = 0.8, atk = 0.01, len = 4, sust = 1, detune = 0.1, curveRate = 4, cutoff = 2000, q = 0.1|
 	var env = EnvGen.kr(Env.adsr(atk, len, sust) , doneAction: 2);
 	var modEnv = EnvGen.kr(Env.perc(atk, len, index));
 	var pEnv = EnvGen.kr(Env.perc(patk, plen, prate));
 	var mod = SinOsc.ar(
-		freq * modRate * (1 + pEnv),
+		freq * modrate * (1 + pEnv),
 		0,
-		freq * modRate * (index) );
+		freq * modrate * (index) );
 
 	var carL = SinOsc.ar(
 		(freq + mod) * (1 + pEnv) + (0.1 * detune),
@@ -161,13 +161,13 @@ SynthDef(\fmpad, {| out, pan, freq = 40, modRate = 0.5, index = 1, patk = 0.001,
 	)
 }).add;
 
-SynthDef(\fmsaw, {| out, pan, freq = 40, modRate = 1, index = 1, patk = 0.001, plen = 0.01, prate = 4, amp = 0.9, atk = 0.01, len = 1, curveRate = 4, cutoff = 8000, q = 0.1|
+SynthDef(\fmsaw, {| out, pan, freq = 40, modrate = 1, index = 1, patk = 0.001, plen = 0.01, prate = 4, amp = 0.9, atk = 0.01, len = 1, curveRate = 4, cutoff = 8000, q = 0.1|
 	var env = EnvGen.kr(Env.perc(atk, len, curve: (-1.0 * curveRate)), doneAction: 2);
 	var modEnv = EnvGen.kr(Env.perc(atk, len, index));
 	var pEnv = EnvGen.kr(Env.perc(patk, plen, prate));
 	var mod = LFSaw.ar(
-		freq * modRate * (1 + pEnv) ,
-		mul: freq * modRate) * modEnv;
+		freq * modrate * (1 + pEnv) ,
+		mul: freq * modrate) * modEnv;
 
 	var car = SinOsc.ar(
 		freq + mod * (1 + pEnv),
@@ -179,13 +179,13 @@ SynthDef(\fmsaw, {| out, pan, freq = 40, modRate = 1, index = 1, patk = 0.001, p
 	)
 }).add;
 
-SynthDef(\fmperc, {| out, pan, freq = 40, modRate = 2, index = 0.5, patk = 0.0001, plen = 0.05, prate = 4, amp = 0.9, atk = 0.0001, len = 2, curveRate = 4|
+SynthDef(\fmperc, {| out, pan, freq = 40, modrate = 2, index = 0.5, patk = 0.0001, plen = 0.05, prate = 4, amp = 0.9, atk = 0.0001, len = 2, curveRate = 4|
 	var env = EnvGen.kr(Env.perc(atk, len, curve: (-1.0 * curveRate)), doneAction: 2);
 	var pEnv = EnvGen.kr(Env.perc(patk, plen, prate));
 	var mod = SinOsc.ar(
-		freq * modRate * (2 + pEnv),
+		freq * modrate * (2 + pEnv),
 		0,
-		freq * modRate * (index));
+		freq * modrate * (index));
 
 	var car = SinOsc.ar(
 		(freq + mod) * (1 + pEnv) ,
@@ -195,6 +195,29 @@ SynthDef(\fmperc, {| out, pan, freq = 40, modRate = 2, index = 0.5, patk = 0.000
 		DirtPan.ar(car, ~dirt.numChannels, pan, env)
 	)
 }).add;
+
+SynthDef(\wub, {|out, pan, freq = 80, index = 32, modrate = 1, len = 1, sust = 1, cutoff = 9000, q = 0.1|
+	var snd;
+	var env = EnvGen.ar(Env.adsr(decayTime:len, sustainLevel: sust), doneAction: 2);
+	var n = 16;
+	var partials = Array.fill(n, {|i| 2 * i * (freq) });
+	snd = Mix.fill(n, {|i|
+		SinOsc.ar((partials[i] * modrate) + (0.1 * Rand(0.1 , 10))) * SinOsc.ar(freq / 2, mul: freq * index ) * 1 / n;
+	});
+	snd = snd * env;
+	snd = [LPF.ar(snd/n, SinOsc.ar(1.3, mul: 500,add: 1000), 0.3), LPF.ar(snd/n, SinOsc.ar(0.7, mul: 700,add: 1300), 0.3)];
+	snd = SoftClipAmp.ar(snd);
+	snd = RLPF.ar(
+		snd,
+		100 + EnvGen.ar(Env.perc( releaseTime: len,level: cutoff)),
+		( 0.01 + 1 - q )
+	);
+	snd = snd * 0.6;
+	OffsetOut.ar(out,
+		DirtPan.ar(snd, ~dirt.numChannels, pan)
+	);
+}).add;
+
 
 SynthDef(\modsaw, {| out, pan, freq = 440, atk = 0.01, len = 2, amp = 0.9, prate = 2 , plen = 0.001 , q = 0.1, cutoff = 6000, cutoffspd = 0|
 	var env = EnvGen.kr(Env.perc(atk, len), doneAction: 2);
@@ -250,7 +273,4 @@ SynthDef(\chirp2, {| out, pan, freq = 40, atk = 0.01, len = 1, amp = 0.9, prate 
 )
 
 Synth(\fmkik,[ len: 3, rez: 0.5]);
-
-
-
 
