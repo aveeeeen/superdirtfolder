@@ -302,6 +302,16 @@ SynthDef(\detsaw, {| out, pan, freq = 440, atk = 0.01, len = 2, sust = 1, amp = 
 	);
 }).add;
 
+SynthDef(\sawpad, {| out, pan, freq = 440, atk = 0.01, len = 2, sust = 1, amp = 0.9, prate = 0 , plen = 0.001 , q = 0.1, detune = 0.02, lpfstart = 10000, lpfend = 500, cutoffspd = 0|
+	var env = EnvGen.kr(Env.adsr(atk, len, sust) , doneAction: 2);
+	var pEnv = EnvGen.kr(Env.perc(0.01, plen, prate));
+	var saw = Saw.ar(freq * (1 .. 8).linexp(1, 6, 1.001, (1 + detune))) * env;
+	saw = Splay.ar(saw);
+	saw = RLPF.ar(saw , XLine.kr(lpfstart, lpfend, len), ( 0.01 + 1 - q ));
+	OffsetOut.ar(out,
+		DirtPan.ar(saw, ~dirt.numChannels, pan, env)
+	);
+}).add;
 
 SynthDef(\chirp, {| out, pan, freq = 40, atk = 0.001, len = 2, amp = 0.9, prate = 300 , plen = 0.1 , q = 0.5, cutoff = 12000, cutoffspd = 0|
 	var env = EnvGen.kr(Env.perc(atk, len, curve: -7), doneAction: 2);
@@ -327,14 +337,40 @@ SynthDef(\chirp2, {| out, pan, freq = 40, atk = 0.01, len = 1, amp = 0.9, prate 
 
 SynthDef(\mplk, {| out, pan, freq = 440, atk = 0.01, len = 4, amp = 0.9, prate = 8 , plen = 0.01, stereorate = 3, q = 0.8 |
 	var snd;
-	var basefreqs = [472, 953, 1423, 2378, 2920, 3401, 3877, 4332];
+	var basefreqs = [469, 938, 1199, 1406, 1984, 2334, 2454, 2814, 2922, 3388, 3859];
 	var ratio = basefreqs.size.collect({|i|
 		(basefreqs[i] / basefreqs[0]);
 	});
 	var env = EnvGen.kr(Env.perc(atk, len), doneAction: 2);
 	var pEnv = EnvGen.kr(Env.perc(0.001, plen, prate));
-	snd = Klang.ar(`[ratio, Array.fill(basefreqs.size, {|i| (1 / basefreqs.size) ** 0.6}), nil], freq);
+	snd = Klang.ar(`[ratio, Array.fill(basefreqs.size, {|i| (1 / basefreqs.size) ** 0.8}), nil], freq);
 	snd = snd / basefreqs.size * env;
+	snd = snd + SinOsc.ar(freq * (1 + pEnv), mul: 0.2);
+	snd = snd * 10.dbamp;
+	snd = [FreqShift.ar(snd, stereorate), FreqShift.ar(snd, 2)];
+	snd = RLPF.ar(snd, XLine.kr(12000, 1000, len), ( 0.01 + 1 - q ));
+	snd = snd + LFNoise1.ar(15000, 0.003);
+	OffsetOut.ar(out,
+		DirtPan.ar(snd, ~dirt.numChannels, pan, env)
+	);
+}).add;
+
+SynthDef(\mplk2, {| out, pan, freq = 440, atk = 0.01, len = 4, amp = 0.9, prate = 8 , plen = 0.01, stereorate = 3, q = 0.8 |
+	var snd;
+	/*var basefreqs = [469, 938, 1199, 1406, 1984, 2334, 2454, 2814, 2922, 3388, 3859];
+	var ratio = basefreqs.size.collect({|i|
+		(basefreqs[i] / basefreqs[0]);
+	});*/
+	var ratio = [ 1.0, 2.0, 2.5565031982942, 2.997867803838, 4.2302771855011, 4.9765458422175, 5.2324093816631, 6.0, 6.2302771855011, 7.2238805970149, 8.228144989339 ];
+	var env = EnvGen.kr(Env.perc(atk, len), doneAction: 2);
+	var pEnv = EnvGen.kr(Env.perc(0.001, plen, prate));
+	snd = SinOsc.ar(
+		freq: ratio * freq,
+		mul: (ratio.size .. 1).linexp(1, ratio.size, 0.08, 1.5)
+	);
+	snd = snd.sum(); // or snd = Mix.ar(snd);
+
+	snd = snd / ratio.size * env;
 	snd = snd + SinOsc.ar(freq * (1 + pEnv), mul: 0.2);
 	snd = snd * 6.dbamp;
 	snd = [FreqShift.ar(snd, stereorate), FreqShift.ar(snd, 2)];
@@ -345,27 +381,30 @@ SynthDef(\mplk, {| out, pan, freq = 440, atk = 0.01, len = 4, amp = 0.9, prate =
 	);
 }).add;
 
-SynthDef(\mplk2, {| out, pan, freq = 440, atk = 0.01, len = 4, amp = 0.9, prate = 4 , plen = 0.01, stereorate = 3, q = 0.8 |
+SynthDef(\mkey, {| out, pan, freq = 440, atk = 0.01, len = 4, amp = 0.9, prate = 8 , plen = 0.005, stereorate = 5, q = 0.5, cutoff 10000 |
 	var snd;
-	var ratios = [ 1.0, 2.0190677966102, 3.0148305084746, 5.0381355932203, 6.1864406779661, 7.2055084745763, 8.2139830508475, 9.1779661016949 ];
+	var basefreqs = [312, 623, 935, 1247, 1557, 1870, 2183, 2496, 2805, 3118, 3432, 4054, 4356, 4727];
+	var ratio = basefreqs.size.collect({|i|
+		(basefreqs[i] / basefreqs[0]);
+	});
 	var env = EnvGen.kr(Env.perc(atk, len), doneAction: 2);
 	var pEnv = EnvGen.kr(Env.perc(0.001, plen, prate));
-	snd = Mix.arFill(ratios.size, {|i|
-		SinOsc.ar(freq * ratios[i]) * i.linexp(0.01, 0.9, ratios.size, 1);
-	});
-	snd = snd / ratios.size * env;
+	snd = Klang.ar(`[ratio, Array.fill(basefreqs.size, {|i| (1 / basefreqs.size) ** 0.7}), nil], freq);
+	snd = snd / basefreqs.size * env;
 	snd = snd + SinOsc.ar(freq * (1 + pEnv), mul: 0.2);
-	snd = [FreqShift.ar(snd, stereorate), FreqShift.ar(snd, 2)];
-	snd = RLPF.ar(snd, XLine.kr(12000, 1000, len), ( 0.01 + 1 - q ));
-	snd = snd + LFNoise1.ar(15000, 0.003);
+	snd = snd * 4.dbamp;
+	snd = [FreqShift.ar(snd, stereorate), FreqShift.ar(snd, 0)];
+	snd = PitchShift.ar(snd, 0.001, 1.25, 0.1) + PitchShift.ar(snd, 0.001, 0.75, 0.1);
+	snd = RLPF.ar(snd, XLine.kr(cutoff, 4000, 0.9), ( 0.01 + 1 - q ));
 	OffsetOut.ar(out,
 		DirtPan.ar(snd, ~dirt.numChannels, pan, env)
 	);
 }).add;
 
-
-SynthDef(\ep, {| out, pan, freq = 440, atk = 0.01, len = 0.1, sust = 0.9, amp = 0.9, prate = 8 , plen = 0.01, stereorate = 3, q = 0.1 |
+SynthDef(\ep, {| out, pan, freq = 440, atk = 0.01, len = 2, sust = 0.6, amp = 0.9, prate = 8 , plen = 0.01, stereorate = 2, q = 0 |
 	var snd;
+	// [261.5, 522.8, 784.2, 1046, 1307, 1568, 1803, 2091, 2353, 2614]; freq
+	// [1.2, 1.0, 0.6, 0.1, 0.001, 0.0001, 0.0001, 0.0001, 0.01, 0.005] mul
 	var basefreqs = [261.5, 522.8, 784.2, 1046, 1307, 1568, 1803, 2091, 2353, 2614];
 	var ratio = basefreqs.size.collect({|i|
 		(basefreqs[i] / basefreqs[0]);
@@ -376,16 +415,19 @@ SynthDef(\ep, {| out, pan, freq = 440, atk = 0.01, len = 0.1, sust = 0.9, amp = 
 	});
 	var harm = Klang.ar(`[ratio_, Array.fill(basefreqs_.size, {|i| (1 / basefreqs_.size) ** 2}), nil], freq);
 	var env = EnvGen.kr(Env.adsr(decayTime: len, sustainLevel: sust), doneAction: 2);
+	var harmenv = EnvGen.kr(Env.perc(releaseTime: 0.1));
 	var pEnv = EnvGen.kr(Env.perc(0.001, plen, prate));
-	snd = Klang.ar(`[ratio, [1.2, 0.9, 0.5, 0.05, 0.01, 0.02, 0.005, 0.005, 0.001, 0.001], nil], freq);
-	snd = snd / basefreqs.size * env;
+
+	snd = Klang.ar(`[ratio, [1.2, 1.0, 0.6, 0.1, 0.001, 0.0001, 0.0001, 0.0001, 0.01, 0.005], nil], freq, 1);
+	snd = snd / basefreqs.size * env * freq.linexp(100, 10000, 1, 0.01);
 	harm = harm / basefreqs_.size;
-	harm = harm * 0.1;
+	harm = harm * harmenv;
 	snd = snd + harm;
-	snd = snd * 8.dbamp;
-	snd = [FreqShift.ar(snd, stereorate), FreqShift.ar(snd, 2)];
-	// snd = RLPF.ar(snd, XLine.kr(12000, 3000, len), ( 0.01 + 1 - q ));
-	// snd = snd + LFNoise1.ar(15000, 0.003);
+	snd = snd * 10.dbamp;
+	snd = [FreqShift.ar(snd, stereorate), FreqShift.ar(snd, 1)];
+	// snd = PitchShift.ar(snd, 0.01);
+	snd = RLPF.ar(snd, XLine.kr(10000, 1000, 1), ( 0.01 + 1 - q ));
+	snd = snd + LFNoise1.ar(15000, 0.003);
 	OffsetOut.ar(out,
 		DirtPan.ar(snd, ~dirt.numChannels, pan, env)
 	);
@@ -397,9 +439,8 @@ Synth(\fmcp);
 
 (
 
-	var basefreqs = [472, 953, 1423, 2378, 2920, 3401, 3877, 4332];
-	var ratio = basefreqs.size.collect({|i|
-		(basefreqs[i] / basefreqs[0]);
-	}).postln;
-
+b = [469, 938, 1199, 1406, 1984, 2334, 2454, 2814, 2922, 3388, 3859];
+r = b.size.collect({|i|
+	(b[i] / b[0]);
+});
 )
