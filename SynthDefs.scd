@@ -1,6 +1,70 @@
 
 (
 
+
+
+
+SynthDef(\sbd2, {
+    |out = 0, pan = 0, amp = 1, len = 0.5, sust = 0.1|
+    var body, bodyFreq, bodyAmp;
+    var pop, popFreq, popAmp;
+    var click, clickAmp;
+    var snd;
+
+    // body starts midrange, quickly drops down to low freqs, and trails off
+    bodyFreq = EnvGen.ar(Env([261, 150, 50], [0.02, 0.1], curve: \exp));
+    bodyAmp = EnvGen.ar(Env.linen(0.005, sust, len), doneAction: 2);
+    body = SinOsc.ar(bodyFreq) * bodyAmp;
+	body = (body*1.4).tanh;
+    // pop sweeps over the midrange
+    popFreq = XLine.kr(750, 261, 0.01);
+    popAmp = EnvGen.ar(Env.linen(0.001, 0.02, 0.001)) * 0.15;
+    pop = SinOsc.ar(popFreq) * popAmp;
+    // click is spectrally rich, covering the high-freq range
+    // you can use Formant, FM, noise, whatever
+    clickAmp = EnvGen.ar(Env.perc(0.001, 0.001)) * 0.4;
+    click = LPF.ar(Formant.ar(910, 8760, 2110), 10000) * clickAmp;
+
+    snd = body + pop + click;
+	snd = snd.tanh;
+
+    OffsetOut.ar(out,
+		DirtPan.ar(snd, ~dirt.numChannels, pan)
+	);
+}).add;
+
+SynthDef(\sbd, {
+    |out = 0, pan = 0, amp = 0.3, len = 0.3, sust = 0.1, freq = 50|
+    var body, bodyFreq, bodyAmp;
+    var pop, popFreq, popAmp;
+    var click, clickAmp;
+    var snd;
+	// var ring = SinOsc.ar(40);
+    // body starts midrange, quickly drops down to low freqs, and trails off
+	bodyFreq = EnvGen.ar(Env([freq * 6,freq * 3,freq], [0.03, 0.08], curve: \exp));
+    bodyAmp = EnvGen.ar(Env.linen(0.005, sust, len), doneAction: 2);
+    body = SinOsc.ar(bodyFreq) * bodyAmp;
+    // pop sweeps over the midrange
+    popFreq = XLine.kr(750, 261, 0.01);
+    popAmp = EnvGen.ar(Env.linen(0.001, 0.02, 0.001)) * 0.15;
+    pop = SinOsc.ar(popFreq) * popAmp;
+    // click is spectrally rich, covering the high-freq range
+    // you can use Formant, FM, noise, whatever
+    clickAmp = EnvGen.ar(Env.perc(0.001, 0.0005)) * 0.3;
+	click = SinOsc.ar(freq * 4, mul: XLine.kr(80, 0.1, 0.02) * freq * 4);
+	click = SinOsc.ar(freq + click) * clickAmp;
+
+    snd = body + pop + click;
+	snd = snd.tanh;
+
+    OffsetOut.ar(out,
+		DirtPan.ar(snd, ~dirt.numChannels, pan)
+	);
+}).add;
+
+
+//////////////////////
+
 SynthDef(\perc2, {| out, pan, freq = 60, plen = 0.01, prate = 2, amp = 0.9, atk = 0.05, len = 2|
 	var pEnv = Line.kr(freq * prate ,freq, plen);
 	var click_pEnv = Line.kr(1000 ,freq, plen);
@@ -50,10 +114,10 @@ SynthDef(\fmkik, {| out, pan, freq = 50, modrate = 0.5, index = -1, patk = 0.001
 	)
 }).add;
 
-SynthDef(\fmkik2, {| out, pan, freq = 21, modrate = 1.5, index = 5, patk = 0.01, plen = 0.1, prate = 4, amp = 0.9, atk = 0.01, len = 1, curveRate = 7, contour = 1|
+SynthDef(\fmkik2, {| out, pan, freq = 42, modrate = 1.5, index = 3, patk = 0.001, plen = 0.12, prate = 4, amp = 1, atk = 0.01, len = 3, curveRate = 7, contour = 1|
 	var cr = -1.0 * curveRate;
 	var env = EnvGen.kr(Env.perc(atk, len, curve: cr), doneAction: 2);
-	var modEnv = EnvGen.kr(Env.perc(atk, len, 1 * contour));
+	var modEnv = EnvGen.kr(Env.perc(atk, len)) * contour;
 	var pEnv = EnvGen.kr(Env.perc(patk, plen, prate));
 	var mod = LFSaw.ar(
 		freq * modrate * (1 + pEnv),
@@ -65,7 +129,9 @@ SynthDef(\fmkik2, {| out, pan, freq = 21, modrate = 1.5, index = 5, patk = 0.01,
 		amp
 	) * env;
 
-	var output = SoftClipAmp.ar(car, 2);
+
+	var output = (RHPF.ar(car, 40, 0.8) * 1.9).tan;
+	output = (output * 2).tanh;
 	OffsetOut.ar(out,
 		DirtPan.ar(output, ~dirt.numChannels, pan, env)
 	)
@@ -225,9 +291,10 @@ SynthDef(\fmcp, {| out, pan, freq = 600, modrate = 4, index = 24, patk = 0.001, 
 		mul: amp) * env;
 
 	snd = RLPF.ar(snd, XLine.kr(10000, 6000, 0.5), ( 0.01 + 1 - q ));
-	snd = SoftClipAmp.ar(snd, 3);
+
 	// snd = PitchShift.ar(snd, 0.01, 1, 0.2) * 4 ;
 	snd = RHPF.ar(snd, freq, 0.5) * XLine.kr(1, 0.001, 1);
+	snd = (snd*3).tanh;
 	OffsetOut.ar(out,
 		DirtPan.ar(snd, ~dirt.numChannels, pan, env)
 	)
