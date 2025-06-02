@@ -32,7 +32,7 @@ SynthDef(\sinpad, {| out, pan, freq = 60, plen = 0.01, prate = 2, amp = 0.9, atk
 	)
 }).add;
 
-SynthDef(\fmkik, {| out, pan, freq = 40, modrate = 1, index = -1, patk = 0.001, plen = 0.07, prate = 16, amp = 0.9, atk = 0.001, len = 1, curveRate = 4, contour = 1|
+SynthDef(\fmkik, {| out, pan, freq = 50, modrate = 0.5, index = -1, patk = 0.001, plen = 0.07, prate = 16, amp = 0.9, atk = 0.001, len = 1, curveRate = 4, contour = 1|
 	var env = EnvGen.kr(Env.perc(atk, len, curve: (-1.0 * curveRate)), doneAction: 2);
 	var modEnv = EnvGen.kr(Env.perc(atk, len, 1 * contour));
 	var pEnv = EnvGen.kr(Env.perc(patk, plen, prate));
@@ -346,7 +346,7 @@ SynthDef(\mplk, {| out, pan, freq = 440, atk = 0.01, len = 4, amp = 0.9, prate =
 	snd = Klang.ar(`[ratio, Array.fill(basefreqs.size, {|i| (1 / basefreqs.size) ** 0.8}), nil], freq);
 	snd = snd / basefreqs.size * env;
 	snd = snd + SinOsc.ar(freq * (1 + pEnv), mul: 0.2);
-	snd = snd * 10.dbamp;
+	snd = snd * 4.dbamp;
 	snd = [FreqShift.ar(snd, stereorate), FreqShift.ar(snd, 2)];
 	snd = RLPF.ar(snd, XLine.kr(12000, 1000, len), ( 0.01 + 1 - q ));
 	snd = snd + LFNoise1.ar(15000, 0.003);
@@ -355,7 +355,7 @@ SynthDef(\mplk, {| out, pan, freq = 440, atk = 0.01, len = 4, amp = 0.9, prate =
 	);
 }).add;
 
-SynthDef(\mplk2, {| out, pan, freq = 440, atk = 0.01, len = 4, amp = 0.9, prate = 8 , plen = 0.01, stereorate = 3, q = 0.8 |
+SynthDef(\mplk2, {| out, pan, freq = 440, atk = 0.01, len = 4, amp = 0.9, prate = 8 , plen = 0.01, stereorate = 2.2, q = 0.5 |
 	var snd;
 	/*var basefreqs = [469, 938, 1199, 1406, 1984, 2334, 2454, 2814, 2922, 3388, 3859];
 	var ratio = basefreqs.size.collect({|i|
@@ -366,13 +366,14 @@ SynthDef(\mplk2, {| out, pan, freq = 440, atk = 0.01, len = 4, amp = 0.9, prate 
 	var pEnv = EnvGen.kr(Env.perc(0.001, plen, prate));
 	snd = SinOsc.ar(
 		freq: ratio * freq,
-		mul: (ratio.size .. 1).linexp(1, ratio.size, 0.08, 1.5)
+		mul: (1 .. ratio.size).linexp(1, ratio.size, 1, 0.1)
 	);
 	snd = snd.sum(); // or snd = Mix.ar(snd);
 
 	snd = snd / ratio.size * env;
 	snd = snd + SinOsc.ar(freq * (1 + pEnv), mul: 0.2);
-	snd = snd * 6.dbamp;
+	// snd = snd * freq.linexp(100, 10000, 0.9, 0.4);
+	snd = snd * 4.dbamp;
 	snd = [FreqShift.ar(snd, stereorate), FreqShift.ar(snd, 2)];
 	snd = RLPF.ar(snd, XLine.kr(12000, 1000, len), ( 0.01 + 1 - q ));
 	snd = snd + LFNoise1.ar(15000, 0.003);
