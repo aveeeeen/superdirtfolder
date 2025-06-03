@@ -1,8 +1,82 @@
 
+
 (
 
+var numChannels = ~dirt.numChannels;
+
+//custom effects
+
+~dirt.addModule('hftan', { |dirtEvent|
+	dirtEvent.sendSynth('hftan_' ++ ~dirt.numChannels,
+		// OPTIONAL
+		// passing this array of parameters could be left out,
+		// but it makes it clear what happens
+		[
+			hftan: ~hftan,
+			hftanfreq: ~hftanFreq,
+			out: ~out
+		]
+	)
+}, { ~hftan.notNil });
+
+SynthDef("hftan_" ++ numChannels, { |out, hftan = 2, hftanFreq = 2000|
+
+	var signal;
+	signal = In.ar(out, numChannels);
+	//signal = LPF.ar(signal, hftanFreq) + HPF.ar(signal.round(0.5 ** (hftan-1)), hftanFreq);
+	signal = LPF.ar(signal, hftanFreq) + HPF.ar((signal * hftan.clip(0,8)).tan.round, hftanFreq);
+	signal = LPF.ar(signal, 15000);
+	ReplaceOut.ar(out, signal);
+
+}).add;
+
+~dirt.addModule('lftan', { |dirtEvent|
+	dirtEvent.sendSynth('lftan_' ++ ~dirt.numChannels,
+		// OPTIONAL
+		// passing this array of parameters could be left out,
+		// but it makes it clear what happens
+		[
+			lftan: ~lftan,
+			lftanfreq: ~lftanFreq,
+			out: ~out
+		]
+	)
+}, { ~lftan.notNil });
+
+SynthDef("lftan_" ++ numChannels, { |out, lftan = 2, lftanFreq = 3000|
+
+	var signal;
+	signal = In.ar(out, numChannels);
+	signal = LPF.ar((signal * lftan.clip(0,4)).tan.round.tanh, lftanFreq) + HPF.ar(signal, lftanFreq);
+	ReplaceOut.ar(out, signal);
+
+}).add;
+
+~dirt.addModule('down', { |dirtEvent|
+	dirtEvent.sendSynth('down_' ++ ~dirt.numChannels,
+		// OPTIONAL
+		// passing this array of parameters could be left out,
+		// but it makes it clear what happens
+		[
+			down: ~down,
+			out: ~out
+		]
+	)
+}, { ~down.notNil });
+
+SynthDef("down_" ++ numChannels, { |out, down = 16|
+
+	var signal;
+	//var srate = Array.fill(down, {|i| 22050 / (i + 1)});
+	signal = In.ar(out, numChannels);
+	//signal = LPF.ar(signal, hftanFreq) + HPF.ar(signal.round(0.5 ** (hftan-1)), hftanFreq);
+	signal = Latch.ar(signal, Impulse.ar(22050 / down));
+	ReplaceOut.ar(out, signal);
+
+}).add;
 
 
+////////////////////////////////////////////
 
 SynthDef(\sbd2, {
     |out = 0, pan = 0, amp = 1, len = 0.5, sust = 0.1|
@@ -402,7 +476,7 @@ SynthDef(\chirp2, {| out, pan, freq = 40, atk = 0.01, len = 1, amp = 0.9, prate 
 
 
 
-SynthDef(\mplk, {| out, pan, freq = 440, atk = 0.01, len = 4, amp = 0.9, prate = 8 , plen = 0.01, stereorate = 3, q = 0.8 |
+SynthDef(\mplk, {| out, pan, freq = 440, atk = 0.01, len = 4, amp = 1, prate = 8 , plen = 0.01, stereorate = 3, q = 0.8 |
 	var snd;
 	var basefreqs = [469, 938, 1199, 1406, 1984, 2334, 2454, 2814, 2922, 3388, 3859];
 	var ratio = basefreqs.size.collect({|i|
