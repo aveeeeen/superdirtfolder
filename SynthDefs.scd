@@ -565,7 +565,7 @@ SynthDef(\ep, {| out, pan, freq = 440, atk = 0.01, len = 2, sust = 0.6, amp = 0.
 	harm = harm / basefreqs_.size;
 	harm = harm * harmenv;
 	snd = snd + harm;
-	snd = snd * 10.dbamp;
+	snd = snd * 8８.dbamp;
 	snd = [FreqShift.ar(snd, stereorate), FreqShift.ar(snd, 1)];
 	// snd = PitchShift.ar(snd, 0.01);
 	snd = RLPF.ar(snd, XLine.kr(10000, 1000, 1), ( 0.01 + 1 - q ));
@@ -579,10 +579,3 @@ SynthDef(\ep, {| out, pan, freq = 440, atk = 0.01, len = 2, sust = 0.6, amp = 0.
 
 Synth(\fmcp);
 
-(
-
-b = [469, 938, 1199, 1406, 1984, 2334, 2454, 2814, 2922, 3388, 3859];
-r = b.size.collect({|i|
-	(b[i] / b[0]);
-});
-)
