@@ -6,6 +6,46 @@ var numChannels = ~dirt.numChannels;
 
 //custom effects
 
+~dirt.addModule('frz', { |dirtEvent|
+	dirtEvent.sendSynth(\spectralFreeze ++ ~dirt.numChannels,
+		// OPTIONAL
+		// passing this array of parameters could be left out,
+		// but it makes it clear what happens
+		[
+			amp: ~frz,
+			rate: ~rate,
+			grainDur: ~graindur,
+			out: ~out
+		]
+	)
+}, { ~frz.notNil });
+
+// 2. スペクトラルフリーズ - 時間が止まったような効果
+SynthDef(\spectralFreeze ++ numChannels, {
+    arg out, bufnum, amp = 0.4, freezeProb = 0.3;
+    var input, buf, chain, freeze, output;
+
+	input = In.ar(out, numChannels);
+
+    // FFT処理
+    chain = FFT(LocalBuf(2048 * 4), input);
+
+    // ランダムなタイミングでスペクトラムをフリーズ
+    freeze = LFNoise0.ar(LFNoise1.ar(0.1).range(0.1, 2)) < freezeProb;
+    chain = PV_MagFreeze(chain, freeze);
+
+    // 位相をスクランブル
+    chain = PV_PhaseShift(chain, LFNoise2.ar(0.05) * pi);
+
+    output = IFFT(chain);
+    output = output * amp;
+
+    // ステレオ化とリバーブ
+    output = Pan2.ar(output, LFNoise1.ar(0.2));
+
+	OffsetOut.ar(out, output);
+}).add;
+
 ~dirt.addModule('bufrd', { |dirtEvent|
 	dirtEvent.sendSynth('bufrd_' ++ ~dirt.numChannels,
 		// OPTIONAL
@@ -15,27 +55,30 @@ var numChannels = ~dirt.numChannels;
 			bufrd: ~bufrd,
 			modfreq: ~modfreq,
 			modamt: ~modamt,
+			bufrate: ~bufrate,
 			out: ~out
 		]
 	)
 }, { ~bufrd.notNil });
 
 
-SynthDef("bufrd_" ++ numChannels, { |out, bufrd = 1, modfreq = 10, modamt = 0.5|
+SynthDef("bufrd_" ++ numChannels, { |out, bufrd = 0.5, bufrate = 2, modfreq = 400, modamt = 8|
 
-	var input, signal, buf, basefreq, phs;
+	var input, signal, buf, basefreq, phs, outsig;
+	var lfoFreq = 2;
+	var pan = LFNoise1.ar(lfoFreq * 5).range(-1.0, 1.0);
 	input = In.ar(out, numChannels);
 	buf = Buffer.alloc(s, s.sampleRate * 2, numChannels);
 	RecordBuf.ar(input, buf);
-	bufrd = bufrd * BufRateScale.kr(buf);
-	basefreq = bufrd * 0.5 / BufDur.kr(buf);
-	phs = SinOsc.ar(
-		SinOsc.kr(modfreq, 0, modamt, basefreq),
-		phase: 5pi/2
+	// bufrd = bufrate * BufRateScale.kr(buf);
+	basefreq = bufrate * 0.5 / BufDur.kr(buf);
+	phs = LFSaw.ar(
+		basefreq //SinOsc.kr(modfreq, 0, modamt, basefreq),
 	).range(0, BufFrames.kr(input));
 	signal = BufRd.ar(2, buf, phs);
-	ReplaceOut.ar(out, signal);
-
+	signal = Pan2.ar(signal, pan);
+	outsig = input + (signal * bufrd);
+	ReplaceOut.ar(out, outsig);
 }).add;
 
 
@@ -216,6 +259,54 @@ SynthDef(\sbd, {
     OffsetOut.ar(out,
 		DirtPan.ar(snd, ~dirt.numChannels, pan)
 	);
+}).add;
+
+SynthDef(\shh, {
+	|out, pan, freq = 5000, ringfreq = 700, modrate = 1, amp = 1, index = 3, len = 1|
+	var snd, mod;
+	mod = LFPulse.ar(freq * modrate) * (freq * modrate * index);
+	snd = LFPulse.ar(freq + mod);
+	snd = snd * LFPulse.ar(ringfreq);
+	snd = RHPF.ar (snd, 6000, 0.3);
+	snd = snd * EnvGen.ar(Env.perc(0.001, len,curve: -8), doneAction: 2);
+	OffsetOut.ar(out,
+		DirtPan.ar(snd, ~dirt.numChannels, pan, amp)
+	)
+}).add;
+
+SynthDef(\skik, {
+	|out, pan, freq = 50, modrate = 2, plen = 0.1, index = 32, len = 0.5, amp = 1|
+	var snd, mod, penv, env, modenv;
+	modenv = EnvGen.ar(Env.perc(0.001, 0.001));
+	env = EnvGen.ar(Env.perc(0.001,len), doneAction: 2);
+	penv = EnvGen.ar(Env.perc(0.001, plen, 4));
+	mod = SinOsc.ar(freq * modrate) * (freq * modrate * index) * modenv;
+	snd = SinOsc.ar(freq * penv.linexp(0,4,1,4) + mod);
+	snd = snd; //*\\\ LFPulse.ar(ringfreq);
+	snd = snd * env;
+	snd = snd * EnvGen.ar(Env.perc(0.001, 0.001)).linexp(0, 1, 1, 4);
+	snd.tanh;
+	OffsetOut.ar(out,
+		DirtPan.ar(snd, ~dirt.numChannels, pan, amp)
+	)
+}).add;
+
+SynthDef(\ssn, {
+	|out, pan, amp = 1, freq = 130, plen = 0.05, len = 0.2|
+	var snd, penv, env, noise;
+	env = EnvGen.ar(Env.perc(0.001,len * 1.1), doneAction: 2);
+	penv = EnvGen.ar(Env.perc(0.001, plen, 2));
+	snd = SinOsc.ar(freq * (1 + penv));
+	snd = snd; //*\\\ LFPulse.ar(ringfreq);
+	snd = snd * env;
+	noise = WhiteNoise.ar();
+	noise = RHPF.ar(noise, 5000, 0.2) * EnvGen.ar(Env.perc(0.001, len)) * -2.dbamp;
+	snd = snd + noise;
+	snd = snd * EnvGen.ar(Env.perc(0.001, 0.01)).linexp(0, 1, 1, 4);
+	snd.tanh;
+	OffsetOut.ar(out,
+		DirtPan.ar(snd, ~dirt.numChannels, pan, amp)
+	)
 }).add;
 
 
@@ -746,15 +837,16 @@ SynthDef(\skik, {
 }).add;
 
 SynthDef(\ssn, {
-	|out, freq = 130, plen = 0.05, len = 0.2|
+	|out, freq = 150, plen = 0.04|
+	var len = 0.18;
 	var snd, penv, env, noise;
-	env = EnvGen.ar(Env.perc(0.001,len * 1.1), doneAction: 2);
-	penv = EnvGen.ar(Env.perc(0.001, plen, 2));
+	env = EnvGen.ar(Env.perc(0.001,len), doneAction: 2);
+	penv = EnvGen.ar(Env.perc(0.001, plen, 4));
 	snd = SinOsc.ar(freq * (1 + penv));
 	snd = snd; //*\\\ LFPulse.ar(ringfreq);
 	snd = snd * env;
 	noise = WhiteNoise.ar();
-	noise = RHPF.ar(noise, 5000, 0.2) * EnvGen.ar(Env.perc(0.001, len)) * -2.dbamp;
+	noise = RHPF.ar(noise, 5000, 0.2) * EnvGen.ar(Env.perc(0.001, len * 1.1)) * -2.dbamp;
 	snd = snd + noise;
 	snd = snd * EnvGen.ar(Env.perc(0.001, 0.01)).linexp(0, 1, 1, 4);
 	snd.tanh;
