@@ -46,37 +46,68 @@ SynthDef(\spectralFreeze ++ numChannels, {
 	OffsetOut.ar(out, output);
 }).add;
 
-~dirt.addModule('bufrd', { |dirtEvent|
+~dirt.addModule('shortbuf', { |dirtEvent|
+	dirtEvent.sendSynth('shortbufrd_' ++ ~dirt.numChannels,
+		// OPTIONAL
+		// passing this array of parameters could be left out,
+		// but it makes it clear what happens
+		[
+			bufrd: ~shortbuf,
+			bufrate: ~bufrate,
+			out: ~out
+		]
+	)
+}, { ~shortbuf.notNil });
+
+
+SynthDef("shortbufrd_" ++ numChannels, { |out, bufrd = 0.5, bufrate = 2, buflen = 2, modfreq = 400, modamt = 8|
+
+	var input, signal, buf, basefreq, phs, outsig;
+	var lfoFreq = 0.3;
+	var pan = LFNoise1.ar(lfoFreq * 5).range(-1.0, 1.0);
+	input = In.ar(out, numChannels);
+	buf = Buffer.alloc(s, s.sampleRate * 0.25, numChannels);
+	RecordBuf.ar(input, buf);
+	bufrate = bufrate * BufRateScale.kr(buf);
+	basefreq = (bufrate) * 0.5 / BufDur.kr(buf)  ;
+	phs = LFSaw.ar(
+		basefreq
+	).range(0, BufFrames.kr(buf));
+	signal = BufRd.ar(numChannels, buf, phs);
+	// signal = Pan2.ar(signal, pan);
+	outsig = input + (signal * bufrd);
+	ReplaceOut.ar(out, outsig);
+}).add;
+
+~dirt.addModule('buf', { |dirtEvent|
 	dirtEvent.sendSynth('bufrd_' ++ ~dirt.numChannels,
 		// OPTIONAL
 		// passing this array of parameters could be left out,
 		// but it makes it clear what happens
 		[
-			bufrd: ~bufrd,
-			modfreq: ~modfreq,
-			modamt: ~modamt,
+			bufrd: ~buf,
 			bufrate: ~bufrate,
 			out: ~out
 		]
 	)
-}, { ~bufrd.notNil });
+}, { ~buf.notNil });
 
 
-SynthDef("bufrd_" ++ numChannels, { |out, bufrd = 0.5, bufrate = 2, modfreq = 400, modamt = 8|
+SynthDef("bufrd_" ++ numChannels, { |out, bufrd = 0.5, bufrate = 2, buflen = 2, modfreq = 400, modamt = 8|
 
 	var input, signal, buf, basefreq, phs, outsig;
-	var lfoFreq = 2;
+	var lfoFreq = 0.3;
 	var pan = LFNoise1.ar(lfoFreq * 5).range(-1.0, 1.0);
 	input = In.ar(out, numChannels);
-	buf = Buffer.alloc(s, s.sampleRate * 2, numChannels);
+	buf = Buffer.alloc(s, s.sampleRate * 1, numChannels);
 	RecordBuf.ar(input, buf);
 	bufrate = bufrate * BufRateScale.kr(buf);
-	basefreq = bufrate * 0.5 / BufDur.kr(buf);
+	basefreq = (bufrate) * 0.5 / BufDur.kr(buf)  ;
 	phs = LFSaw.ar(
 		basefreq
-	).range(0, BufFrames.kr(input));
-	signal = BufRd.ar(2, buf, phs);
-	signal = Pan2.ar(signal, pan);
+	).range(0, BufFrames.kr(buf));
+	signal = BufRd.ar(numChannels, buf, phs);
+	// signal = Pan2.ar(signal, pan);
 	outsig = input + (signal * bufrd);
 	ReplaceOut.ar(out, outsig);
 }).add;
@@ -262,13 +293,15 @@ SynthDef(\sbd, {
 }).add;
 
 SynthDef(\shh, {
-	|out, pan, freq = 5000, ringfreq = 700, modrate = 1, amp = 1, index = 3, len = 1|
+	|out, pan, freq = 5000, ringfreq = 700, modrate = 1, amp = 1.5, index = 3, len = 1|
 	var snd, mod;
 	mod = LFPulse.ar(freq * modrate) * (freq * modrate * index);
 	snd = LFPulse.ar(freq + mod);
 	snd = snd * LFPulse.ar(ringfreq);
+	snd = snd * 3;
 	snd = RHPF.ar (snd, 6000, 0.3);
 	snd = snd * EnvGen.ar(Env.perc(0.001, len,curve: -8), doneAction: 2);
+	snd.tanh;
 	OffsetOut.ar(out,
 		DirtPan.ar(snd, ~dirt.numChannels, pan, amp)
 	);
@@ -306,6 +339,21 @@ SynthDef(\ssn, {
 	snd = snd * EnvGen.ar(Env.perc(0.001, 0.01)).linexp(0, 1, 1, 4);
 	snd = snd * 2;
 	snd.tanh;
+	OffsetOut.ar(out,
+		DirtPan.ar(snd, ~dirt.numChannels, pan, amp)
+	);
+}).add;
+
+SynthDef(\scp, {
+	| out, pan, freq = 600, amp = 1.5, atk = 0.0001, len = 0.5, curveRate = 6, q = 0.2|
+	var env = EnvGen.kr(Env.perc(atk, len, curve: (-1.0 * curveRate)), doneAction: 2);
+	var snd = LFNoise0.ar(12000) * env;
+
+	snd = RLPF.ar(snd, XLine.kr(10000, 6000, 0.5), q.linlin(0, 1, 1, 0.01));
+
+	// snd = PitchShift.ar(snd, 0.001, 1, 0.1) * 4 ;
+	snd = RHPF.ar(snd, freq, 0.5) * XLine.kr(1, 0.001, len);
+	snd = (snd*3).tanh;
 	OffsetOut.ar(out,
 		DirtPan.ar(snd, ~dirt.numChannels, pan, amp)
 	);
