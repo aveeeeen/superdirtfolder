@@ -329,7 +329,7 @@ SynthDef(\shh, {
 SynthDef(\skik, {
 	|out, pan, freq = 50, modrate = 1, plen = 0.14, prate = 4, index = 32, len = 0.4, amp = 1.5|
 	var snd, mod, penv, env, modenv;
-	modenv = EnvGen.ar(Env.perc(0.001, 0.0001));
+	modenv = EnvGen.ar(Env.perc(0.001, 0.001));
 	env = EnvGen.ar(Env([0,1,0.75,0], [0.001, len/4, len/2]), doneAction: 2);
 	penv = EnvGen.ar(Env.perc(0.001, plen, prate));
 	mod = SinOsc.ar(freq * modrate * penv.linexp(0,prate,1,prate) ) * (freq * modrate * index) * modenv.linexp(0, 1, 0.005, 1);
@@ -346,17 +346,17 @@ SynthDef(\skik, {
 }).add;
 
 SynthDef(\sak, {
-	|out, pan, amp = 1, freq = 42, plen = 0.1, prate = 8, len 1.4, index = 48, modrate = 1|
+	|out, pan, amp = 1, freq = 50, plen = 0.12, prate = 8, len 1.4, index = 48, modrate = 1|
 	var snd, mod, env, penv;
-	var modenv = EnvGen.ar(Env.perc(0.001, len / 4));
+	var modenv = EnvGen.ar(Env.perc(0.001, 0.001));
 	env = EnvGen.ar(Env.perc(0.001, len), doneAction: 2);
-	penv = EnvGen.ar(Env([freq, prate * freq, prate * freq / 2 , prate * freq / 4, freq , 20], [0.001, plen / 16, plen / 4 , plen , plen], \exp));
-	mod = LFSaw.ar(penv * modrate) * modrate * index;
+	penv = EnvGen.ar(Env([freq, prate * freq, prate * freq / 2 , prate * freq / 4, freq , 20], [0.001, plen / 16, plen / 2 , plen / 2 , plen / 2], \exp));
+	mod = LFSaw.ar(penv * modrate) * modrate * index; //* modenv.linlin(0, 1 , 0.7, 4);
 	snd = SinOsc.ar(penv + mod) * env;
 	// snd = LPF.ar(snd, XLine.kr(15000, 500, len / 2));
 	snd = snd * EnvGen.ar(Env.perc(0.001, 0.001)).linexp(0, 1, 1, 12);
-	snd = RHPF.ar(snd, 30, 0.5);
-	snd = snd * 4;
+	snd = RHPF.ar(snd, 50, 0.7);
+	snd = snd * 5;
 	snd = snd.tanh;
 	OffsetOut.ar(out,
 		DirtPan.ar(snd, ~dirt.numChannels, pan, amp)
@@ -380,17 +380,17 @@ SynthDef(\sak2, {
 }).add;
 
 SynthDef(\ssn, {
-	|out, pan, amp = 1, freq = 180, plen = 0.05, len = 0.3|
+	|out, pan, amp = 1, freq = 160, prate = 6, plen = 0.14, len = 0.3|
 	var snd, penv, env, noise;
-	env = EnvGen.ar(Env.perc(0.001,len * 0.9, curve: -6), doneAction: 2);
-	penv = EnvGen.ar(Env.perc(0.001, plen, 4));
-	snd = SinOsc.ar(freq * (1 + penv));
-	snd = snd; //*\\\ LFPulse.ar(ringfreq);
+	env = EnvGen.ar(Env.perc(0.0001,len * 0.9, curve: -6), doneAction: 2);
+	penv = EnvGen.ar(Env([1, prate, prate / 2, 1] , [0.001, plen / 16, plen / 8]));
+	snd = SinOsc.ar(freq * penv);
+	snd.tanh;
 	snd = snd * env;
 	noise = WhiteNoise.ar();
-	noise = RHPF.ar(noise, 7000, 0.4) * EnvGen.ar(Env.perc(0.001, len)) * -2.dbamp;
+	noise = BPF.ar(noise, XLine.kr(10000, 7000, len * 1.2), 0.8) * EnvGen.ar(Env.perc(0.001, len)) * -2.dbamp;
 	snd = snd + noise;
-	snd = snd * EnvGen.ar(Env.perc(0.001, 0.01)).linexp(0, 1, 1, 4);
+	snd = snd * EnvGen.ar(Env.perc(0.0001, 0.05)).linexp(0, 1, 1, 24);
 	snd = snd * 3;
 	snd.tanh;
 	OffsetOut.ar(out,
@@ -399,24 +399,24 @@ SynthDef(\ssn, {
 }).add;
 
 SynthDef(\scp, {
-	| out, pan, freq = 600, amp = 1.5, atk = 0.0001, len = 0.3, curveRate = 6, q = 0.8|
+	| out, pan, freq = 600, amp = 1.5, atk = 0.0001, len = 0.3, curveRate = 6, q = 0.7|
 	var env = EnvGen.kr(Env.perc(atk, len, curve: (-1.0 * curveRate)), doneAction: 2);
 	var snd = LFNoise0.ar(12000) * env;
 
-	snd = RLPF.ar(snd, XLine.kr(10000, 4000, len), q.linlin(0, 1, 1, 0.01));
-	snd = snd + BPF.ar(snd, XLine.kr(4000, freq, len), 0.1);
+	snd = RLPF.ar(snd, XLine.kr(10000, 6000, len), q.linlin(0, 1, 1, 0.01));
+	snd = snd + BPF.ar(snd, XLine.kr(8000, freq, len), 0.01);
 	snd = RHPF.ar(snd, freq, 0.3);
-	snd = snd * 10;
+	snd = snd * 12;
 	snd = snd.tanh;
-	snd = snd * Env.perc(0.001, len).ar(Done.freeSelf);
-	snd = PitchShift.ar(snd, 0.001, 1.1, 0.05) + PitchShift.ar(snd, 0.002, 1.2, 0.1, 0.01);
+	snd = snd * Env.perc(0.0001, len).ar(Done.freeSelf) * 2;
+	// snd = PitchShift.ar(snd, 0.001, 1.1, 0.05);
 	OffsetOut.ar(out,
 		DirtPan.ar(snd, ~dirt.numChannels, pan, amp)
 	);
 }).add;
 
 SynthDef(\sperc, {
-	|out, pan, amp = 1, freq = 160, modrate = 0.4, plen = 0.1, index = 5, len = 0.4|
+	|out, pan, amp = 1, freq = 160, modrate = 0.4, plen = 0.1, index = 5, len = 0.8|
 	var snd, mod, penv, env, modenv;
 	modenv = EnvGen.ar(Env.perc(0.01, len * 0.4));
 	env = EnvGen.ar(Env.perc(0.001,len, curve: -6), doneAction: 2);
@@ -426,6 +426,22 @@ SynthDef(\sperc, {
 	snd = snd * env;
 	snd = snd * EnvGen.ar(Env.perc(0.001, 0.001)).linexp(0, 1, 1, 4);
 	snd = HPF.ar(snd, 80) * 2;
+	snd.tanh;
+	OffsetOut.ar(out,
+		DirtPan.ar(snd, ~dirt.numChannels, pan, amp)
+	);
+}).add;
+
+SynthDef(\stom, {
+	|out, pan, amp = 1, freq = 160, modrate = 1.25, plen = 0.01, index = 8, len = 1|
+	var snd, mod, penv, env, modenv;
+	modenv = EnvGen.ar(Env.perc(0.01, 0.1 * 0.2));
+	env = EnvGen.ar(Env.perc(0.001,len, curve: -4), doneAction: 2);
+	penv = EnvGen.ar(Env.perc(0.001, plen, 4, -8));
+	mod = SinOsc.ar(freq * modrate) * (freq * modrate * index) * modenv.linexp(0, 1, 0.05, 1);
+	snd = SinOsc.ar(freq * penv.linexp(0,4,1,4) + mod);
+	snd = snd * env;
+	snd = snd * EnvGen.ar(Env.perc(0.0001, 0.001)).linexp(0, 1, 1, 4);
 	snd.tanh;
 	OffsetOut.ar(out,
 		DirtPan.ar(snd, ~dirt.numChannels, pan, amp)
@@ -840,7 +856,7 @@ SynthDef(\detsaw, {| out, pan, freq = 440, atk = 0.01, len = 2, sust = 1, amp = 
 		(freq) * (pEnv + 1) - (1 * detune)
 	) * env;
 
-	var outnode = RLPF.ar([sawL,sawR] , XLine.kr(cutoff, 300, cutoffspd), ( 0.01 + 1 - q ));
+	var outnode = RLPF.ar([sawL,sawR] , XLine.kr(cutoff, 200, cutoffspd), ( 0.01 + 1 - q ));
 	OffsetOut.ar(out,
 		DirtPan.ar(outnode, ~dirt.numChannels, pan, amp)
 	);
