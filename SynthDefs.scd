@@ -85,7 +85,7 @@ SynthDef("shortbufrd_" ++ numChannels, { |out, bufrd = 0.5, bufrate = 4, buflen 
 	var lfoFreq = 0.3;
 	var pan = LFNoise1.ar(lfoFreq * 5).range(-1.0, 1.0);
 	input = In.ar(out, numChannels);
-	buf = Buffer.alloc(s, s.sampleRate / 32, numChannels);
+	buf = Buffer.alloc(s, s.sampleRate / 8, numChannels);
 	RecordBuf.ar(input, buf);
 	bufrate = bufrate * BufRateScale.kr(buf);
 	basefreq = (bufrate) * 0.5 / (BufDur.kr(buf))   ;
@@ -327,17 +327,17 @@ SynthDef(\shh, {
 }).add;
 
 SynthDef(\skik, {
-	|out, pan, freq = 50, modrate = 1, plen = 0.14, index = 32, len = 0.3, amp = 1.5|
+	|out, pan, freq = 50, modrate = 1, plen = 0.14, prate = 4, index = 32, len = 0.4, amp = 1.5|
 	var snd, mod, penv, env, modenv;
-	modenv = EnvGen.ar(Env.perc(0.001, 0.01));
-	env = EnvGen.ar(Env([0,1,0.7,0], [0.001, len/3, len/4]), doneAction: 2);
-	penv = EnvGen.ar(Env.perc(0.001, plen, 6));
-	mod = SinOsc.ar(freq * modrate) * (freq * modrate * index) * modenv.linexp(0, 1, 0.001, 1);
-	snd = SinOsc.ar(freq * penv.linexp(0,4,1,4) + mod);
+	modenv = EnvGen.ar(Env.perc(0.001, 0.0001));
+	env = EnvGen.ar(Env([0,1,0.75,0], [0.001, len/4, len/2]), doneAction: 2);
+	penv = EnvGen.ar(Env.perc(0.001, plen, prate));
+	mod = SinOsc.ar(freq * modrate * penv.linexp(0,prate,1,prate) ) * (freq * modrate * index) * modenv.linexp(0, 1, 0.005, 1);
+	snd = SinOsc.ar(freq * penv.linexp(0,prate,1,prate) + mod);
 	snd = snd; //*\\\ LFPulse.ar(ringfreq);
 	snd = snd * EnvGen.ar(Env.perc(0.001, 0.001)).linexp(0, 1, 1, 4);
 	snd = snd * 3;
-	snd = RHPF.ar(snd, 40, 0.5);
+	`snd = RHPF.ar(snd, 40, 0.7);
 	snd = snd * env;
 	snd.tanh;
 	OffsetOut.ar(out,
@@ -399,15 +399,17 @@ SynthDef(\ssn, {
 }).add;
 
 SynthDef(\scp, {
-	| out, pan, freq = 600, amp = 1.5, atk = 0.0001, len = 0.5, curveRate = 6, q = 0.2|
+	| out, pan, freq = 600, amp = 1.5, atk = 0.0001, len = 0.3, curveRate = 6, q = 0.8|
 	var env = EnvGen.kr(Env.perc(atk, len, curve: (-1.0 * curveRate)), doneAction: 2);
 	var snd = LFNoise0.ar(12000) * env;
 
-	snd = RLPF.ar(snd, XLine.kr(10000, 6000, len), q.linlin(0, 1, 1, 0.01));
+	snd = RLPF.ar(snd, XLine.kr(10000, 4000, len), q.linlin(0, 1, 1, 0.01));
+	snd = snd + BPF.ar(snd, XLine.kr(4000, freq, len), 0.1);
+	snd = RHPF.ar(snd, freq, 0.3);
 	snd = snd * 10;
-	snd = PitchShift.ar(snd, 0.001, 1.1, 0.1) ;
-	snd = RHPF.ar(snd, freq, 0.5) * XLine.kr(1, 0.001, len);
 	snd = snd.tanh;
+	snd = snd * Env.perc(0.001, len).ar(Done.freeSelf);
+	snd = PitchShift.ar(snd, 0.001, 1.1, 0.05) + PitchShift.ar(snd, 0.002, 1.2, 0.1, 0.01);
 	OffsetOut.ar(out,
 		DirtPan.ar(snd, ~dirt.numChannels, pan, amp)
 	);
