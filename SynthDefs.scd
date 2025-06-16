@@ -342,7 +342,7 @@ SynthDef(\soh, {
 }).add;
 
 SynthDef(\skik, {
-	|out, pan, freq = 50, modrate = 1, plen = 0.14, prate = 4, index = 32, len = 0.4, amp = 1.5|
+	|out, pan, freq = 50, modrate = 1, plen = 0.14, prate = 4, index = 32, len = 0.6, amp = 1.5|
 	var snd, mod, penv, env, modenv;
 	modenv = EnvGen.ar(Env.perc(0.001, 0.001));
 	env = EnvGen.ar(Env([0,1,0.75,0], [0.001, len/4, len/2]), doneAction: 2);
@@ -453,7 +453,7 @@ SynthDef(\sperc, {
 }).add;
 
 SynthDef(\stom, {
-	|out, pan, amp = 1, freq = 88, modrate = 2, plen = 0.1, index = 14, len = 1|
+	|out, pan, amp = 1, freq = 88, modrate = 2, plen = 0.1, index = 14, len = 0.3|
 	var snd, mod, penv, env, modenv;
 	modenv = EnvGen.ar(Env.perc(0.001, 0.02));
 	env = EnvGen.ar(Env.perc(0.001,len, curve: -4), doneAction: 2);
