@@ -352,7 +352,7 @@ SynthDef(\skik, {
 	snd = snd; //*\\\ LFPulse.ar(ringfreq);
 	snd = snd * EnvGen.ar(Env.perc(0.001, 0.001)).linexp(0, 1, 1, 4);
 	snd = snd * 3;
-	`snd = RHPF.ar(snd, 40, 0.7);
+	snd = RHPF.ar(snd, 40, 0.7);
 	snd = snd * env;
 	snd.tanh;
 	OffsetOut.ar(out,
