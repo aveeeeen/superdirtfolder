@@ -47,7 +47,7 @@ SynthDef(\spectralFreeze ++ numChannels, {
 	input = In.ar(out, numChannels);
 
     // FFT処理
-    chain = FFT(LocalBuf(2048 * 4), input);
+    chain = FFT(LocalBuf(2048), input);
 
     // ランダムなタイミングでスペクトラムをフリーズ
     freeze = LFNoise0.ar(LFNoise1.ar(0.1).range(0.1, 2)) < freezeProb;
@@ -484,6 +484,20 @@ SynthDef(\snoise, {
 	);
 }).add;
 
+SynthDef(\ssub, {| out, pan, gate = 1, freq = 40, modrate = 0.5, index = 1.25, amp = 1, atk = 0.0001, len = 0.3, sust = 0.9|
+	var env, mod, snd;
+	env = EnvGen.kr(Env.adsr(0.001, len, sust, 0.1), gate: gate, doneAction: 2);
+	snd = SinOsc.ar([1, 2, 3] * freq, mul: [0.3, 0.01, 0.05]);
+	snd = snd.sum;
+	snd = snd * env;
+	snd = (snd * 3);
+	snd = RLPF.ar(snd, 200);
+	snd = snd.tanh;
+	OffsetOut.ar(out,
+		DirtPan.ar(snd, ~dirt.numChannels, pan, amp)
+	);
+}).add;
+
 //////////////////////
 
 SynthDef(\randhit, {
@@ -772,19 +786,6 @@ SynthDef(\fmkey, {| out, pan, freq = 40, modrate = 1, index = 2, patk = 0.0001, 
 	);
 }).add;
 
-SynthDef(\ssub, {| out, pan, freq = 40, modrate = 0.5, index = 1.25, amp = 1, atk = 0.0001, len = 0.3, sust = 0.9|
-	var env, mod, snd;
-	env = EnvGen.kr(Env.adsr(0.001, len, sust, 0.1), doneAction: 2);
-	snd = SinOsc.ar([1, 2, 3] * freq, mul: [0.3, 0.01, 0.05]);
-	snd = snd.sum;
-	snd = snd * env;
-	snd = (snd * 3);
-	snd = RLPF.ar(snd, 200);
-	snd = snd.tanh;
-	OffsetOut.ar(out,
-		DirtPan.ar(snd, ~dirt.numChannels, pan, amp)
-	);
-}).add;
 
 SynthDef(\fmcp, {| out, pan, freq = 600, modrate = 4, index = 24, patk = 0.001, plen = 0.1, prate = 8, amp = 1.5, atk = 0.0001, len = 0.3, curveRate = 4, q = 0.5|
 	var env = EnvGen.kr(Env.perc(atk, len, curve: (-1.0 * curveRate)), doneAction: 2);
@@ -875,8 +876,8 @@ SynthDef(\modsaw, {| out, pan, freq = 440, atk = 0.01, len = 2, amp = 0.9, prate
 	);
 }).add;
 
-SynthDef(\detsaw, {| out, pan, freq = 440, atk = 0.01, len = 2, sust = 1, amp = 0.9, prate = 0 , plen = 0.001 , q = 0.1, detune = 0.01, cutoff = 6000, cutoffspd = 2|
-	var env = EnvGen.kr(Env.adsr(atk, len, sust) , doneAction: 2);
+SynthDef(\detsaw, {| out, pan, gate = 1, freq = 440, atk = 0.01, len = 2, sust = 1, amp = 0.9, prate = 0 , plen = 0.001 , q = 0.1, detune = 0.01, cutoff = 6000, cutoffspd = 2|
+	var env = EnvGen.kr(Env.adsr(atk, len, sust), gate: gate , doneAction: 2);
 	var pEnv = EnvGen.kr(Env.perc(0.001, plen, prate));
 	var sawL = Saw.ar(
 		(freq) * (pEnv + 1) + (1 * detune)
@@ -892,10 +893,11 @@ SynthDef(\detsaw, {| out, pan, freq = 440, atk = 0.01, len = 2, sust = 1, amp = 
 	);
 }).add;
 
-SynthDef(\sawpad, {| out, pan, freq = 440, atk = 0.01, len = 2, sust = 1, amp = 1, prate = 0 , plen = 0.001 , q = 0.1, detune = 0.02, lpfstart = 10000, lpfend = 500, cutoffspd = 0|
-	var env = EnvGen.kr(Env.adsr(atk, len, sust) , doneAction: 2);
+SynthDef(\sawpad, {| out, pan, gate = 1, freq = 440, atk = 0.01, len = 2, sust = 1, amp = 1, prate = 0 , plen = 0.001 , q = 0.1, detune = 0.02, lpfstart = 10000, lpfend = 500, cutoffspd = 0|
+	var env = EnvGen.kr(Env.adsr(atk, len, sust), gate: gate , doneAction: 2);
 	var pEnv = EnvGen.kr(Env.perc(0.01, plen, prate));
 	var saw = Saw.ar(freq * (1 .. 8).linexp(1, 6, 1.001, (1 + detune))) * env;
+
 	saw = Splay.ar(saw);
 	saw = RLPF.ar(saw , XLine.kr(lpfstart, lpfend, len), ( 0.01 + 1 - q ));
 	OffsetOut.ar(out,
@@ -903,8 +905,8 @@ SynthDef(\sawpad, {| out, pan, freq = 440, atk = 0.01, len = 2, sust = 1, amp = 
 	);
 }).add;
 
-SynthDef(\chirp, {| out, pan, freq = 40, atk = 0.001, len = 0.5, amp = 0.9, prate = 300 , plen = 0.1 , q = 0.5, cutoff = 12000, cutoffspd = 0|
-	var env = EnvGen.kr(Env.perc(atk, len, curve: -7), doneAction: 2);
+SynthDef(\chirp, {| out, pan, gate = 1, freq = 40, atk = 0.001, len = 0.5, amp = 0.9, prate = 300 , plen = 0.1 , q = 0.5, cutoff = 12000, cutoffspd = 0|
+	var env = EnvGen.kr(Env.perc(atk, len, curve: -7), gate: gate, doneAction: 2);
 	var pEnv = EnvGen.kr(Env.perc(0.01, plen, prate, -7));
 	var osc2 = SinOsc.ar(freq * (1 + pEnv) ) * env;
 	var outnode = RLPF.ar(osc2 , XLine.kr(cutoff, 20, len), ( 0.01 + 1 - q ));
@@ -947,14 +949,14 @@ SynthDef(\mplk, {| out, pan, freq = 440, atk = 0.01, len = 4, amp = 1, prate = 8
 	);
 }).add;
 
-SynthDef(\mplk2, {| out, pan, freq = 440, atk = 0.01, len = 4, amp = 0.9, prate = 8 , plen = 0.01, stereorate = 2.2, q = 0.5 |
+SynthDef(\mplk2, {| out, pan, gate = 1, freq = 440, atk = 0.01, len = 4, amp = 0.9, prate = 8 , plen = 0.01, stereorate = 2.2, q = 0.5 |
 	var snd;
 	/*var basefreqs = [469, 938, 1199, 1406, 1984, 2334, 2454, 2814, 2922, 3388, 3859];
 	var ratio = basefreqs.size.collect({|i|
 		(basefreqs[i] / basefreqs[0]);
 	});*/
 	var ratio = [ 1.0, 2.0, 2.5565031982942, 2.997867803838, 4.2302771855011, 4.9765458422175, 5.2324093816631, 6.0, 6.2302771855011, 7.2238805970149, 8.228144989339 ];
-	var env = EnvGen.kr(Env.perc(atk, len), doneAction: 2);
+	var env = EnvGen.kr(Env.perc(atk, len), gate: gate, doneAction: 2);
 	var pEnv = EnvGen.kr(Env.perc(0.001, plen, prate));
 	snd = SinOsc.ar(
 		freq: ratio * freq,
@@ -974,13 +976,13 @@ SynthDef(\mplk2, {| out, pan, freq = 440, atk = 0.01, len = 4, amp = 0.9, prate 
 	);
 }).add;
 
-SynthDef(\mkey, {| out, pan, freq = 440, atk = 0.01, len = 4, amp = 0.9, prate = 8 , plen = 0.005, stereorate = 5, q = 0.5, cutoff 10000 |
+SynthDef(\mkey, {| out, pan, gate = 1, freq = 440, atk = 0.01, len = 4, amp = 0.9, prate = 8 , plen = 0.005, stereorate = 5, q = 0.5, cutoff 10000 |
 	var snd;
 	var basefreqs = [312, 623, 935, 1247, 1557, 1870, 2183, 2496, 2805, 3118, 3432, 4054, 4356, 4727];
 	var ratio = basefreqs.size.collect({|i|
 		(basefreqs[i] / basefreqs[0]);
 	});
-	var env = EnvGen.kr(Env.perc(atk, len), doneAction: 2);
+	var env = EnvGen.kr(Env.perc(atk, len), gate: gate, doneAction: 2);
 	var pEnv = EnvGen.kr(Env.perc(0.001, plen, prate));
 	snd = Klang.ar(`[ratio, Array.fill(basefreqs.size, {|i| (1 / basefreqs.size) ** 0.7}), nil], freq);
 	snd = snd / basefreqs.size * env;
@@ -1026,7 +1028,7 @@ SynthDef(\ep, {| out, pan, freq = 440, atk = 0.01, len = 2, sust = 0.7, amp = 0.
 	);
 }).add;
 
-SynthDef(\ep2, {| out, pan, freq = 440, atk = 0.01, len = 2, sust = 0.7, amp = 0.9, prate = 8 , plen = 0.01, stereorate = 2, q = 0 |
+SynthDef(\ep2, {| out, pan, gate = 1, freq = 440, atk = 0.01, len = 2, sust = 0.7, amp = 0.9, prate = 8 , plen = 0.01, stereorate = 2, q = 0 |
 	var snd;
 	// [261.5, 522.8, 784.2, 1046, 1307, 1568, 1803, 2091, 2353, 2614]; freq
 	// [1.2, 1.0, 0.6, 0.1, 0.001, 0.0001, 0.0001, 0.0001, 0.01, 0.005] mul
@@ -1039,7 +1041,7 @@ SynthDef(\ep2, {| out, pan, freq = 440, atk = 0.01, len = 2, sust = 0.7, amp = 0
 		(basefreqs_[i] / basefreqs_[0]);
 	});
 	var harm = Klang.ar(`[ratio_, Array.fill(basefreqs_.size, {|i| (1 / basefreqs_.size) ** 2}), nil], freq);
-	var env = EnvGen.kr(Env.adsr(decayTime: len, sustainLevel: sust), doneAction: 2);
+	var env = EnvGen.kr(Env.adsr(decayTime: len, sustainLevel: sust), gate: gate, doneAction: 2);
 	var harmenv = EnvGen.kr(Env.perc(releaseTime: 0.1));
 	var pEnv = EnvGen.kr(Env.perc(0.001, plen, prate));
 
@@ -1060,41 +1062,266 @@ SynthDef(\ep2, {| out, pan, freq = 440, atk = 0.01, len = 2, sust = 0.7, amp = 0
 
 )
 
+
+
+
+(
+
+SynthDef(\rev, {|in, out, rev = 0.3, amp = 0,  room = 0.8|
+	var input, wet;
+	input = In.ar(in, 2);
+	wet = FreeVerb2.ar(input[0], input[1], mix: rev , room: room, damp: 0.2);
+	input = input + (wet * amp);
+	ReplaceOut.ar(out, input);
+}).add;
+
+SynthDef(\coarse, {|in, out, rate = 0|
+	var input;
+	input = In.ar(in, 2);
+	input = Decimator.ar(input, s.sampleRate / rate);
+	ReplaceOut.ar(out, input);
+}).add;
+
+SynthDef(\dist, {|in, out, dist = 0|
+	var input;
+	input = In.ar(in, 2);
+	input = input * dist.linlin(0, 1, 1, 8);
+	input.clip;
+	ReplaceOut.ar(out, input);
+}).add;
+
+SynthDef(\clipper, {
+	arg in, out;
+	var input = In.ar(in, 2);
+	input.softclip;
+	ReplaceOut.ar(out, input);
+}).add;
+
+SynthDef(\mastergain, {
+	arg in, out, amp = 1;
+	var input = In.ar(in, 2);
+	input = input * amp;
+	ReplaceOut.ar(out, input);
+}).add;
+
+SynthDef(\fold, {
+	arg in, out, fold = 1, wet = 0;
+	var input = In.ar(in, 2);
+	input = input + (input.fold(-1 * (fold), fold) * wet);
+	ReplaceOut.ar(out, input);
+}).add;
+
+)
+
 // Midi setup
 
 (
 MIDIClient.init;
 MIDIIn.connectAll;
+
+~ch0 = Array.newClear(128);
+~ch1 = Array.newClear(128);
+~ch2 = Array.newClear(128);
+~ch3 = Array.newClear(128);
+
+~ch4 = Array.newClear(128);
+~ch5 = Array.newClear(128);
+~ch6 = Array.newClear(128);
+~ch7 = Array.newClear(128);
+
+~ch8 = Array.newClear(128);
+~ch9 = Array.newClear(128);
+~ch10 = Array.newClear(128);
+~ch11 = Array.newClear(128);
+
+~ch12 = Array.newClear(128);
+~ch13 = Array.newClear(128);
+~ch14 = Array.newClear(128);
+~ch15 = Array.newClear(128);
+
 )
+
+
+(
+~snd = Group.new(s.defaultGroup);
+~fx = Group.new(~snd, \addAfter);
+
+~fxbus = Bus.audio(s, 2);
+~revbus = Bus.audio(s, 2);
+)
+
+(
+~rev = Synth(\rev, [
+	\out, 0,
+	\in, ~revbus,
+], ~fx, \addToTail);
+
+~coarse = Synth(\coarse, [
+	\out, ~fxbus,
+	\in, ~fxbus
+], ~fx);
+
+~clipper = Synth(\clipper, [
+	\out, ~fxbus,
+	\in, ~fxbus
+], ~fx);
+
+~dist = Synth(\dist, [
+	\out, ~fxbus,
+	\in, ~fxbus
+], ~fx);
+
+~fold = Synth(\fold, [
+	\in, ~fxbus,
+	\out, ~fxbus
+], ~fx);
+
+~mastergain = Synth(\mastergain, [
+	\out, ~fxbus,
+	\in, ~fxbus
+], ~fx);
+
+~mastergain.set(\amp, 0.8);
+~rev.set(\rev, 0.4, \room, 0.9, \amp, 0.2);
+)
+
+(
+~rev.free;
+~dist.free;
+~multitap.free;
+~coarse.free;
+~fold.free;
+~clipper.free;
+~mastergain.free;
+)
+
 
 (
 MIDIdef.noteOn(\noteOn, { |veloc, num, chan, src|
 	if (chan == 0) {
-		Synth(\skik,[\len, 0.6, \amp, 0.9]);
+		~ch0[num] = Synth(\skik,[
+			\len, veloc.linexp(0, 127, 0.05, 2),
+			\amp, 0.8,
+			\out, ~fxbus
+		], ~snd);
 	};
 	if (chan == 1) {
-		Synth(\ssn, [\len, veloc.linlin(0, 127, 0.1, 1)]);
+		~ch1[num] = Synth(\ssn, [
+			\len, veloc.linexp(0, 127, 0.1, 1),
+			\out, ~fxbus
+		], ~snd);
 	};
 	if (chan == 2) {
-		Synth(\shh, [\len, 0.08, \amp, 2]);
+		~ch2[num] = Synth(\shh, [
+			\len, veloc.linexp(0, 127, 0.02, 1), \amp, 2,
+			\out, ~fxbus
+		], ~snd);
 	};
 	if (chan == 3) {
-		Synth(\stom, [\len, [0.3, 0.9, 0.5, 0.1].choose, \freq, num.midicps, \pan, rrand(-1, 1), \index, veloc.linlin(0, 127, 1, 64 )]);
+		~ch3[num] = Synth(\stom, [
+			\len, [0.3, 0.9, 4, 0.1].choose, \freq, num.midicps, \pan, rrand(-1, 1), \index, veloc.linexp(0, 127, 1, 64 ),
+			\out, ~fxbus,
+			\amp, 0.8
+		], ~snd);
 	};
 
 	if (chan == 4) {
-		Synth(\fmsaw, [\len, 2, \freq, num.midicps, \detune, 1.2]);
+		~ch4[num] = Synth(\fmsaw, [
+			\len, 2, \freq, num.midicps, \detune, 1.2,
+			\out, ~fxbus,
+			\amp, 0.8
+		], ~snd);
 	};
 	if (chan == 5) {
-		Synth(\fmkey, [\len, 0.3, \freq, num.midicps]);
+		~ch5[num] = Synth(\mkey, [
+			\len, 1, \freq, num.midicps,
+			\out, ~fxbus,
+			\amp, 0.8
+		], ~snd);
 	};
 	if (chan == 6) {
-		Synth(\ssub, [\len, 0.3, \freq, num.midicps]);
+		~ch6[num] = Synth(\ssub, [
+			\len, 2, \freq, num.midicps,
+			\out, ~fxbus,
+			\amp, 1
+		], ~snd);
 	};
 	if (chan == 7) {
-		Synth(\detsaw, [\len, 1, \freq, num.midicps]);
+		~ch7[num] = Synth(\detsaw, [
+			\len, veloc.linlin(0,127, 0.1, 4),
+			\sust, 0.5, \cutoffspd, 0.5,
+			\amp, 0.9,
+			\freq, num.midicps, \q, 0.9,
+			\out, ~fxbus
+		], ~snd);
+	};
+});
+
+MIDIdef.noteOff(\noteOff, { |veloc, num, chan, src|
+	if (chan == 0) {
+		~ch0[num].set(\gate, 0);
+		~ch0[num] = nil;
+	};
+	if (chan == 1) {
+		~ch1[num].set(\gate, 0);
+		~ch1[num] = nil;
+	};
+	if (chan == 2) {
+		~ch2[num].set(\gate, 0);
+		~ch2[num] = nil;
+	};
+	if (chan == 3) {
+		~ch3[num].set(\gate, 0);
+		~ch3[num] = nil;
+	};
+
+	if (chan == 4) {
+		~ch4[num].set(\gate, 0);
+		~ch4[num] = nil;
+	};
+	if (chan == 5) {
+		~ch5[num].set(\gate, 0);
+		~ch5[num] = nil;
+	};
+	if (chan == 6) {
+		~ch6[num].set(\gate, 0);
+		~ch6[num] = nil;
+	};
+	if (chan == 7) {
+		~ch7[num].set(\gate, 0);
+		~ch7[num] = nil;
+	};
+});
+
+MIDIdef.cc(\control, {
+	arg val, knob, chan;
+
+	[val, knob, chan].postln;
+
+	// rev
+	if (chan == 0) {
+		if(knob == 64) { ~rev.set(\rev, val.linlin(0, 127, 0, 1) ) };
+		if(knob == 65) { ~rev.set(\room, val.linlin(0, 127, 0, 1) ) };
+		if(knob == 66) { ~rev.set(\amp, val.linlin(0, 127, 0, 1)) };
+	};
+
+	// dist
+	if (chan == 1) {
+		if(knob == 64) { ~dist.set(\dist, val.linexp(0, 127, 0, 1) )};
+	};
+
+	// coarse
+	if (chan == 2) {
+		if(knob == 64) { ~coarse.set(\rate, val.linexp(0,127, 1, 32)) };
+	};
+
+	// fold
+	if (chan == 3) {
+		if(knob == 64) { ~fold.set(\fold, val.linexp(0,127, 1.2, 0.01)) };
+		if(knob == 65) { ~fold.set(\wet, val.linexp(0,127, 0, 1)) };
 	};
 });
 )
+
 
 
