@@ -306,6 +306,7 @@ SynthDef("bufrd_" ++ numChannels, { |out, bufrd = 0.5, bufrate = 2, buftempo = 1
 	ReplaceOut.ar(out, outsig);
 }).add;
 
-~dirt.orderModules(['bitcrush', 'hfsquiz', 'fold', 'scm', 'comb', 'buf', 'shortbuf', 'lpf', 'binshift', 'cmap' ]);
+~dirt.orderModules(['bitcrush', 'hfsquiz', 'fold', 'scm', 'buf', 'shortbuf', 'lpf', 'cmap', 'binshift', 'comb']);
+
 
 );

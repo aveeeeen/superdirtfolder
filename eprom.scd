@@ -12,7 +12,7 @@ SynthDef(\eprom, { |out, freq = 32, len = 1, spd = 13.5, indexrate = 4, modrate 
 	snd = snd.fold(-0.9,0.9);
 	snd = snd.round(0.015);
 	snd = Notch.ar(snd, SinOsc.kr(XLine.kr(100, 1, len / 4)).linexp(-1, 1, 20, 10000), 4.5);
-	snd = snd * 12;
+	snd = snd * 3;
 	snd.tanh;
 	snd = snd * env;
 	snd = Pan2.ar(snd * 0.8);
@@ -21,7 +21,7 @@ SynthDef(\eprom, { |out, freq = 32, len = 1, spd = 13.5, indexrate = 4, modrate 
 
 );
 
-Synth(\eprom, [\freq, 40, \modrate, 4, \spd, 4, \len, 8, \indexrate, 2]);
+Synth(\eprom, [\freq, 40, \modrate, 4, \spd, 4, \len, 1, \indexrate, 2]);
 
 
 { CombN.ar(WhiteNoise.ar(0.01), 0.01, XLine.kr(0.0001, 0.01, 20), -0.2) }.play;
