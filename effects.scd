@@ -1,5 +1,55 @@
-~dirt.modules;
+(
+var numChannels = ~dirt.numChannels;
 
+	SynthDef("cmap_g" ++ numChannels, {
+		arg dryBus, effectBus, gate = 1, cmap = 0;
+		var input, chainL, chainR, output;
+		input = In.ar(dryBus, numChannels);
+
+		chainL = FFT(LocalBuf(2048, 1), input[0]);
+		chainL = PV_ConformalMap(chainL, 0, cmap);
+
+		chainR = FFT(LocalBuf(2048, 1), input[1]);
+		chainR = PV_ConformalMap(chainR, 0, cmap);
+		output = [IFFT(chainL), IFFT(chainR)];
+
+		output = output * EnvGen.kr(Env.asr, gate, doneAction:2);
+		DirtPause.ar(output.sum, graceTime:4);
+
+		ReplaceOut.ar(dryBus, output);
+	}, [\ir, \ir]).add;
+
+	SynthDef("binshift_g" ++ numChannels, {
+		arg dryBus, effectBus, gate = 1, stretch = 1, shift = 0;
+		var input, chainL, chainR, output;
+		input = In.ar(dryBus, numChannels);
+
+		chainL = FFT(LocalBuf(2048, 1), input[0]);
+		chainL = PV_BinShift(chainL, stretch, shift);
+
+		chainR = FFT(LocalBuf(2048, 1), input[1]);
+		chainR = PV_BinShift(chainR, stretch, shift);
+		output = [IFFT(chainL), IFFT(chainR)];
+		output = output * EnvGen.kr(Env.asr, gate, doneAction:2);
+		DirtPause.ar(output.sum, graceTime:4);
+
+		ReplaceOut.ar(dryBus, output);
+	}, [\ir, \ir]).add;
+);
+
+(
+~dirt.orbits.do { |x|
+	x.globalEffects = x.globalEffects.addFirst(
+		GlobalDirtEffect(\cmap_g, [\cmap]),
+	);
+	x.globalEffects = x.globalEffects.addFirst(
+		GlobalDirtEffect(\binshift_g, [\shift, \stretch]),
+	);
+	x.initNodeTree;
+};
+);
+
+~dirt.modules;
 (
 
 var numChannels = ~dirt.numChannels;
@@ -110,53 +160,53 @@ SynthDef('spectral-scram_' ++ numChannels, { |out, scram|
 	ReplaceOut.ar(out, signal)
 }, [\ir, \ir]).add;
 
-~dirt.addModule('binshift', { |dirtEvent|
-	dirtEvent.sendSynth('binshift_' ++ numChannels,
-		[
-			shift: ~shift,
-			rate: ~stretch,
-			out: ~out
-		]
-	)
-}, { ~shift.notNil or: ~stretch.notNil });
+// ~dirt.addModule('binshift', { |dirtEvent|
+// 	dirtEvent.sendSynth('binshift_' ++ numChannels,
+// 		[
+// 			shift: ~shift,
+// 			rate: ~stretch,
+// 			out: ~out
+// 		]
+// 	)
+// }, { ~shift.notNil or: ~stretch.notNil });
+//
+//
+// SynthDef('binshift_' ++ numChannels, {
+// 	arg out, rate = 1, shift = 0;
+// 	var input, chainL, chainR, output;
+// 	input = In.ar(out, numChannels);
+//
+// 	chainL = FFT(LocalBuf(2048, 1), input[0]);
+// 	chainL = PV_BinShift(chainL, rate, shift);
+//
+// 	chainR = FFT(LocalBuf(2048, 1), input[1]);
+// 	chainR = PV_BinShift(chainR, rate, shift);
+// 	output = [IFFT(chainL), IFFT(chainR)];
+// 	ReplaceOut.ar(out, output);
+// }).add;
 
-
-SynthDef('binshift_' ++ numChannels, {
-	arg out, rate = 1, shift = 0;
-	var input, chainL, chainR, output;
-	input = In.ar(out, numChannels);
-
-	chainL = FFT(LocalBuf(2048, 1), input[0]);
-	chainL = PV_BinShift(chainL, rate, shift);
-
-	chainR = FFT(LocalBuf(2048, 1), input[1]);
-	chainR = PV_BinShift(chainR, rate, shift);
-	output = [IFFT(chainL), IFFT(chainR)];
-	ReplaceOut.ar(out, output);
-}).add;
-
-~dirt.addModule('cmap', { |dirtEvent|
-	dirtEvent.sendSynth('cmap_' ++ numChannels,
-		[
-			cmap: ~cmap,
-			out: ~out
-		]
-	)
-}, { ~cmap.notNil });
-
-SynthDef('cmap_' ++ numChannels, {
-	arg out, cmap = 0;
-	var input, chainL, chainR, output;
-	input = In.ar(out, numChannels);
-
-	chainL = FFT(LocalBuf(2048, 1), input[0]);
-	chainL = PV_ConformalMap(chainL, 0, cmap);
-
-	chainR = FFT(LocalBuf(2048, 1), input[1]);
-	chainR = PV_ConformalMap(chainR, 0, cmap);
-	output = [IFFT(chainL), IFFT(chainR)];
-	ReplaceOut.ar(out, output);
-}).add;
+// ~dirt.addModule('cmap', { |dirtEvent|
+// 	dirtEvent.sendSynth('cmap_' ++ numChannels,
+// 		[
+// 			cmap: ~cmap,
+// 			out: ~out
+// 		]
+// 	)
+// }, { ~cmap.notNil });
+//
+// SynthDef('cmap_' ++ numChannels, {
+// 	arg out, cmap = 0;
+// 	var input, chainL, chainR, output;
+// 	input = In.ar(out, numChannels);
+//
+// 	chainL = FFT(LocalBuf(2048, 1), input[0]);
+// 	chainL = PV_ConformalMap(chainL, 0, cmap);
+//
+// 	chainR = FFT(LocalBuf(2048, 1), input[1]);
+// 	chainR = PV_ConformalMap(chainR, 0, cmap);
+// 	output = [IFFT(chainL), IFFT(chainR)];
+// 	ReplaceOut.ar(out, output);
+// }).add;
 
 ~dirt.addModule('convolution', { |dirtEvent|
 	dirtEvent.sendSynth('convolution_' ++ numChannels,
@@ -306,7 +356,5 @@ SynthDef("bufrd_" ++ numChannels, { |out, bufrd = 0.5, bufrate = 2, buftempo = 1
 	ReplaceOut.ar(out, outsig);
 }).add;
 
-~dirt.orderModules(['bitcrush', 'hfsquiz', 'fold', 'scm', 'buf', 'shortbuf', 'lpf', 'cmap', 'binshift', 'comb']);
-
-
+~dirt.orderModules(['bitcrush', 'hfsquiz', 'fold', 'scm', 'buf', 'shortbuf', 'lpf', 'comb']);
 );

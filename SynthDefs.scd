@@ -116,6 +116,26 @@ SynthDef(\skik, {
 	);
 }).add;
 
+SynthDef(\skik2, {
+	|out, pan, gate = 1, freq = 50, modrate = 1, plen = 0.05, prate = 6, index = 32, len = 0.4, amp = 1.5|
+	var snd, mod, penv, env, modenv;
+	modenv = EnvGen.ar(Env.perc(0.001, 0.001));
+	env = EnvGen.ar(Env([0,1,0.5,0], [0.001, len/16, len]), gate: gate, doneAction: 2);
+	penv = EnvGen.ar(Env.perc(0.001, plen, prate));
+	mod = SinOsc.ar(freq * modrate * penv.linexp(0,prate,1,prate) ) * (freq * modrate * index) * modenv.linexp(0, 1, 0.005, 1);
+	snd = SinOsc.ar(freq * penv.linexp(0,prate,1,prate) + mod);
+	snd = snd; //*\\\ LFPulse.ar(ringfreq);
+	snd = snd * 2;
+	snd = snd * EnvGen.ar(Env.perc(0.001, 0.1)).linexp(0, 1, 1, 3);
+	snd = RHPF.ar(snd, 40, 0.7);
+	snd = snd * env;
+	snd.tanh;
+	snd = snd * 1.2;
+	OffsetOut.ar(out,
+		DirtPan.ar(snd, ~dirt.numChannels, pan, amp)
+	);
+}).add;
+
 SynthDef(\sak, {
 	|out, pan, gate = 1, amp = 1, freq = 50, plen = 0.12, prate = 6, len 1.4, index = 48, modrate = 1|
 	var snd, mod, env, penv;
@@ -151,7 +171,7 @@ SynthDef(\sak2, {
 }).add;
 
 SynthDef(\ssn, {
-	|out, pan, amp = 1, gate = 1, freq = 160, prate = 6, plen = 0.12, len = 0.25|
+	|out, pan, amp = 1, gate = 1, freq = 160, prate = 6, plen = 0.12, len = 0.3|
 	var snd, penv, env, noise;
 	env = EnvGen.ar(Env.perc(0.0001,len, curve: -6), gate: gate, doneAction: 2);
 	penv = EnvGen.ar(Env([1, prate, prate / 3, 1] , [0.001, plen / 16, plen / 8]));
@@ -159,9 +179,9 @@ SynthDef(\ssn, {
 	snd.tanh;
 	snd = snd * env;
 	noise = WhiteNoise.ar();
-	noise = BPF.ar(noise, XLine.kr(12000, 7000, len), 0.9) * EnvGen.ar(Env.perc(0.001, len)) * -2.dbamp;
+	noise = BPF.ar(noise, XLine.kr(12000, 6000, len), 2) * EnvGen.ar(Env.perc(0.001, len)) * -4.dbamp;
 	snd = snd + noise;
-	snd = snd * 1.2;
+	snd = snd * 1.6;
 	snd = snd * EnvGen.ar(Env.perc(0.0001, 0.2)).linexp(0, 1, 1, 1.2);
 	snd.tanh;
 	OffsetOut.ar(out,
@@ -252,9 +272,9 @@ SynthDef(\ssub, {| out, pan, gate = 1, freq = 40, modrate = 0.5, index = 1.25, a
 	);
 }).add;
 
-SynthDef(\s808, {| out, pan, gate = 1, freq = 40, modrate = 0.5, index = 1.25, amp = 1, atk = 0.0001, len = 2, sust = 0.9|
+SynthDef(\s808, {| out, pan, gate = 1, freq = 40, amp = 1, atk = 0.0001, len = 1, plen = 0.2|
 	var env, mod, snd;
-	var penv = EnvGen.kr(Env([1,1.4,1], [0.01, 0.3], -4));
+	var penv = EnvGen.kr(Env([1,1.5,1], [0.01, plen], -6));
 	env = EnvGen.kr(Env([0,1,0], [0.001, len], -4), gate: gate, doneAction: 2);
 	snd = SinOsc.ar([1, 2, 3] * freq * penv, mul: [0.3, 0.08, 0.14]);
 	snd = snd.sum;
