@@ -1,3 +1,4 @@
+
 // effects
 
 
@@ -44,10 +45,10 @@ SynthDef(\sbd, {
 	// var ring = SinOsc.ar(40);
     // body starts midrange, quickly drops down to low freqs, and trails off
 	bodyFreq = EnvGen.ar(Env([freq * 6,freq * 3,freq], [0.01, 0.08], \exp));
-	bodyAmp = EnvGen.ar(Env([0, 1, 0.75, 0], [0.001, len / 4, len / 2], 4), doneAction: 2);
+	bodyAmp = EnvGen.ar(Env([0, 1, 0.75, 0], [0.001, len / 4, len / 2], 2), doneAction: 2);
     body = SinOsc.ar(bodyFreq) * bodyAmp;
     // pop sweeps over the midrange
-    popFreq = XLine.kr(750, 261, 0.01);
+    popFreq = XLine.kr(750, 250, 0.01);
     popAmp = EnvGen.ar(Env.linen(0.001, 0.02, 0.001)) * 0.3;
     pop = SinOsc.ar(popFreq) * popAmp;
     // click is spectrally rich, covering the high-freq range
@@ -96,10 +97,127 @@ SynthDef(\soh, {
 	);
 }).add;
 
+SynthDef(\mchbd, {
+    arg clr = 0, shp = 0.5, sweep = 1, contour = 0.2,
+
+    // Additional parameters
+    freq = 50, amp = 1, gate = 1, len = 0.4, plen = 0.1, out = 0, pan;
+
+    var sig, env, pitchEnv, colorMod, shapeMod, feedback, freqMod, mod;
+
+    // Main amplitude envelope
+    env = env = EnvGen.ar(Env([0,1,0.5,0], [0.001, len/4, len], -4), gate: gate, doneAction: 2);
+
+    // Pitch envelope for sweep parameter
+    pitchEnv = EnvGen.kr(
+        Env([1, 0.2, 0], [0.03, plen], [-4, -2]),
+        gate
+    );
+
+    // Apply sweep to frequency modulation
+    freqMod = freq * (1 + (pitchEnv * sweep * 6));
+
+    // Contour modulates color and shape over time
+	contour = contour.linlin(0, 1, 1, 0);
+	colorMod = clr * (1 + (contour * env * 2));
+    shapeMod = shp * (1 + (contour * env * 2));
+
+    /*// Start with sine wave
+    sig = SinOsc.ar(freqMod);*/
+
+	mod = SinOsc.ar(freqMod) * freq * 32 * Env([0, 1, 0], [0.001, 0.001], -4).kr(0);
+
+    // SHAPE: Triangle/sawtooth modulation with feedback
+    // FM-style feedback synthesis
+	// feedback = LocalIn.ar(1);
+	sig = SinOscFB.ar(freqMod + (mod * sweep), shapeMod.linlin(0, 1, 0, 0.9));
+
+    // COLOR: Sine to square wave morphing using wave shaping
+    // Soft square-like modulation by adding harmonics
+    sig = sig + (sig.pow(3) * colorMod * 0.3);
+    sig = sig + (sig.pow(5) * colorMod * 0.5);
+
+    // Additional harmonic content for square-like character
+    sig = sig + (SinOsc.ar(freqMod * 3) * colorMod * 0.3);
+    sig = sig + (SinOsc.ar(freqMod * 5) * colorMod * 0.2);
+
+    // Triangle wave component
+    sig = sig + (LFTri.ar(freqMod) * shapeMod * 0.9);
+
+    // Add noise at high shape values
+	sig = sig + (BPF.ar(PinkNoise.ar(), 8000, 0.5) * shapeMod.floor.pow(2) * 0.4);
+    // Feedback delay and filtering
+	// feedback = DelayN.ar(sig, 0.01, 0.001);
+    // feedback = LPF.ar(feedback, freqMod * 4);
+	/*LocalOut.ar(feedback);*/
+
+    // Soft saturation and filtering
+    sig = sig * env;
+	sig = sig.tanh;
+	sig = sig * -4.dbamp;
+
+    // Final amplitude and envelope
+
+    // Stereo output
+    OffsetOut.ar(out,
+		DirtPan.ar(sig, ~dirt.numChannels, pan, amp)
+	);
+}).add;
+
+SynthDef(\mchtone, {
+    arg clr = 1, shp = 0.5, sweep = 1, contour = 0.2,
+
+    // Additional parameters
+    freq = 50, amp = 1, gate = 1, len = 0.4, plen = 0.1, out = 0, pan;
+
+    var sig, env, pitchEnv, colorMod, shapeMod, feedback, freqMod, mod;
+
+    // Main amplitude envelope
+    env = env = EnvGen.ar(Env([0,1,0.5,0], [0.001, len/4, len], -4), gate: gate, doneAction: 2);
+
+    // Apply sweep to frequency modulation
+    freqMod = freq * clr;
+
+    // Contour modulates color and shape over time
+	contour = contour.linlin(0, 1, 1, 0);
+    shapeMod = shp * (1 + (contour * env));
+
+    /*// Start with sine wave
+    sig = SinOsc.ar(freqMod);*/
+
+	mod = SinOsc.ar(freqMod) * freq * shp.linlin(0, 1, 0, 16);
+
+    // SHAPE: Triangle/sawtooth modulation with feedback
+    // FM-style feedback synthesis
+	feedback = LocalIn.ar(1);
+	sig = SinOsc.ar(freq + mod + (feedback * freq * sweep));
+
+    // Add noise at high shape values
+	// sig = sig + (BPF.ar(PinkNoise.ar(), 8000, 0.5) * shapeMod.floor.pow(2) * 0.4);
+    // Feedback delay and filtering
+	feedback = DelayN.ar(sig, 0.01, 0.00001);
+	feedback = RHPF.ar(feedback, 20, 0.1);
+	LocalOut.ar(sig);
+
+    // Soft saturation and filtering
+    sig = sig * env;
+	sig = sig.tanh;
+	sig = sig * -4.dbamp;
+
+    // Final amplitude and envelope
+
+    // Stereo output
+    OffsetOut.ar(out,
+		DirtPan.ar(sig, ~dirt.numChannels, pan, amp)
+	);
+}).add;
+
+
+
 SynthDef(\skik, {
 	|out, pan, gate = 1, freq = 50, modrate = 1, plen = 0.12, prate = 6, index = 32, len = 0.4, amp = 1.5|
 	var snd, mod, penv, env, modenv;
-	modenv = EnvGen.ar(Env.perc(0.001, 0.001));
+	modenv = EnvGen.ar(Env.perc(0.001, 0.0001));
 	env = EnvGen.ar(Env([0,1,0.75,0], [0.001, len/4, len/2]), gate: gate, doneAction: 2);
 	penv = EnvGen.ar(Env.perc(0.001, plen, prate));
 	mod = SinOsc.ar(freq * modrate * penv.linexp(0,prate,1,prate) ) * (freq * modrate * index) * modenv.linexp(0, 1, 0.005, 1);
@@ -107,7 +225,7 @@ SynthDef(\skik, {
 	snd = snd; //*\\\ LFPulse.ar(ringfreq);
 	snd = snd * 2;
 	snd = snd * EnvGen.ar(Env.perc(0.001, 0.1)).linexp(0, 1, 1, 3);
-	snd = RHPF.ar(snd, 40, 0.7);
+	// snd = RHPF.ar(snd, 40, 0.7);
 	snd = snd * env;
 	snd.tanh;
 	snd = snd * 1.2;
@@ -117,14 +235,15 @@ SynthDef(\skik, {
 }).add;
 
 SynthDef(\skik2, {
-	|out, pan, gate = 1, freq = 50, modrate = 1, plen = 0.05, prate = 6, index = 32, len = 0.4, amp = 1.5|
-	var snd, mod, penv, env, modenv;
-	modenv = EnvGen.ar(Env.perc(0.001, 0.001));
-	env = EnvGen.ar(Env([0,1,0.5,0], [0.001, len/16, len]), gate: gate, doneAction: 2);
+	|out, pan, gate = 1, freq = 50, modrate = 8, plen = 0.05, prate = 6, index = 32, len = 0.4, amp = 1.5|
+	var snd, mod, penv, env, modenv, click;
+	modenv = EnvGen.ar(Env.perc(0.001, 0.01));
+	env = EnvGen.ar(Env([0,1,0.5,0], [0.001, len/8, len]), gate: gate, doneAction: 2);
 	penv = EnvGen.ar(Env.perc(0.001, plen, prate));
-	mod = SinOsc.ar(freq * modrate * penv.linexp(0,prate,1,prate) ) * (freq * modrate * index) * modenv.linexp(0, 1, 0.005, 1);
-	snd = SinOsc.ar(freq * penv.linexp(0,prate,1,prate) + mod);
-	snd = snd; //*\\\ LFPulse.ar(ringfreq);
+	mod = SinOsc.ar(freq * modrate * penv.linexp(0,prate,1,prate) ) * (freq * modrate * index) * modenv.linexp(0, 1, 0.00001, 1);
+	click = SinOsc.ar(freq + mod) * modenv;
+	snd = SinOsc.ar(freq * penv.linexp(0,prate,1,prate)) + click;
+	snd = snd;
 	snd = snd * 2;
 	snd = snd * EnvGen.ar(Env.perc(0.001, 0.1)).linexp(0, 1, 1, 3);
 	snd = RHPF.ar(snd, 40, 0.7);
@@ -171,15 +290,16 @@ SynthDef(\sak2, {
 }).add;
 
 SynthDef(\ssn, {
-	|out, pan, amp = 1, gate = 1, freq = 160, prate = 6, plen = 0.12, len = 0.3|
+	|out, pan, amp = 1, gate = 1, prate = 6, plen = 0.12, len = 0.3|
 	var snd, penv, env, noise;
+	var freq = 160;
 	env = EnvGen.ar(Env.perc(0.0001,len, curve: -6), gate: gate, doneAction: 2);
 	penv = EnvGen.ar(Env([1, prate, prate / 3, 1] , [0.001, plen / 16, plen / 8]));
 	snd = SinOsc.ar(freq * penv);
 	snd.tanh;
 	snd = snd * env;
 	noise = WhiteNoise.ar();
-	noise = BPF.ar(noise, XLine.kr(12000, 6000, len), 2) * EnvGen.ar(Env.perc(0.001, len)) * -4.dbamp;
+	noise = BPF.ar(noise, XLine.kr(12000, 6000, len), 1) * EnvGen.ar(Env.perc(0.001, len)) * -4.dbamp;
 	snd = snd + noise;
 	snd = snd * 1.6;
 	snd = snd * EnvGen.ar(Env.perc(0.0001, 0.2)).linexp(0, 1, 1, 1.2);
@@ -190,20 +310,21 @@ SynthDef(\ssn, {
 }).add;
 
 SynthDef(\scp, {
-	| out, pan, gate = 1, freq = 800, amp = 1.5, atk = 0.0001, len = 0.25, curveRate = 6, q = 0.7|
-	var env = EnvGen.kr(Env.perc(atk, len, curve: (-1.0 * curveRate)), gate: gate, doneAction: 2);
-	var env2 = EnvGen.kr(Env([0, 0, 0.8, 0], [0.01, 0.0001, len * 0.3]));
+	| out, pan, gate = 1, amp = 1.5, atk = 0.0001, len = 0.3, curveRate = 6, q = 0.7|
+	var freq = 800;
+	var env = Env([0, 1, 0], [atk, len], -6).kr(0);
+	var env2 = Env([0, 0, 1, 0], [0.01, atk, len], -6).kr(2, gate);
 	var distenv2 = EnvGen.kr(Env([0, 0, 0.8, 0], [0.01, 0.0001, 0.05]));
 	var snd = LFNoise0.ar(12000) * env;
 
 	snd = RLPF.ar(snd, XLine.kr(12000, 8000, len), q.linlin(0, 1, 1, 0.01));
-	snd = snd + BPF.ar(snd, XLine.kr(8000, freq, len), 0.01);
+	snd = snd + BPF.ar(snd, XLine.kr(8000, freq, len), 0.1);
 	snd = RHPF.ar(snd, freq, 0.3);
 	snd = snd * 1.2;
 	snd = snd.tanh;
-	snd = (snd * Env.perc(0.0001, len).ar(Done.freeSelf)) + (snd * env2);
+	snd = (snd * env) + (snd * env2);
 	snd = (snd * EnvGen.ar(Env.perc(0.0001, 0.05)).linexp(0, 1, 1, 1.5)) + (snd * distenv2.linexp(0, 1, 1, 1.4));
-	snd = snd / 2.3;
+	snd = snd / 1.5;
 	snd.tanh;
 	// snd = PitchShift.ar(snd, 0.001, 1.1, 0.05);
 	OffsetOut.ar(out,
@@ -280,6 +401,21 @@ SynthDef(\s808, {| out, pan, gate = 1, freq = 40, amp = 1, atk = 0.0001, len = 1
 	snd = snd.sum;
 	snd = snd * env;
 	snd = (snd * 1.6);
+	snd = snd.tanh;
+	OffsetOut.ar(out,
+		DirtPan.ar(snd, ~dirt.numChannels, pan, amp)
+	);
+}).add;
+
+SynthDef(\dist808, {| out, pan, gate = 1, freq = 40, amp = 1, atk = 0.0001, len = 1, plen = 0.05|
+	var env, mod, snd;
+	var penv = EnvGen.kr(Env([1,1.5,1], [0.01, plen], -6));
+	env = EnvGen.kr(Env([0,1,0], [0.001, len], -4), gate: gate, doneAction: 2);
+	snd = SinOsc.ar([1, 2, 3] * freq * penv, mul: [0.3, 0.08, 0.14]);
+	snd = snd.sum;
+	snd = snd * env;
+	snd = CrossoverDistortion.ar(snd, 0.2, 1.0);
+	snd = snd * 2;
 	snd = snd.tanh;
 	OffsetOut.ar(out,
 		DirtPan.ar(snd, ~dirt.numChannels, pan, amp)
@@ -376,7 +512,21 @@ SynthDef(\sinpad, {| out, pan, freq = 60, plen = 0.01, prate = 2, amp = 1, atk =
 	);
 }).add;
 
-SynthDef(\fmkik, {| out, pan, freq = 42, modrate = 1, index = 0.7, patk = 0.001, plen = 0.07, prate = 16, amp = 1, atk = 0.001, len = 1, curveRate = 2, contour = 0.8|
+SynthDef(\fmmod, { arg out, pan, amp = 1, gate = 1, freq = 40, len = 0.5, index = 12, modrate = 1;
+	var snd, env;
+	env = EnvGen.ar(Env([0,1,0], [0.001, len], -4), gate, doneAction: 2);
+	snd = SinOsc.ar(
+		freq * (SinOsc.ar(freq * LFSaw.kr(100).linlin(-1, 1, 0.01, 10) * 2) * index);
+    );
+	snd = snd * env;
+	snd = snd * amp;
+	snd = RHPF.ar(snd, 60, 1.1);
+    OffsetOut.ar(out,
+		DirtPan.ar(snd, ~dirt.numChannels, pan, amp)
+	);
+}).add;
+
+SynthDef(\fmkik, {| out, pan, freq = 42, modrate = 1, index = 0.7, patk = 0.001, plen = 0.07, prate = 16, amp = 1, atk = 0.001, len = 0.4, curveRate = 2, contour = 0.8|
 	var env = EnvGen.kr(Env.perc(atk, len, curve: (-1.0 * curveRate)), doneAction: 2);
 	var modEnv = EnvGen.kr(Env.perc(atk, len)) * contour;
 	var pEnv = EnvGen.kr(Env.perc(patk, plen, prate));
@@ -493,6 +643,20 @@ SynthDef(\fmfilter, {| out, pan, freq = 40, modrate = 1, index = 1, patk = 0.001
 	);
 }).add;
 
+SynthDef(\fmbass, {
+	arg pan, out, amp = 1, gate = 1, freq = 110, len = 1, index = 1, modrate = 1.5;
+	var car, mod, mod2, env, indexctrl;
+	indexctrl = Env([0, 1, 0], [0.01, len], -4).kr(0).linexp(0, 1, 1, index * 16);
+	env = Env([0, 1, 0], [0.001, len], -4).kr(2, gate);
+	mod2 = SinOsc.ar(freq * modrate * 4) * indexctrl * 1.3;
+	mod = SinOsc.ar(freq * modrate) * indexctrl * 0.9;
+	car = SinOsc.ar(freq + mod + mod2) ;
+	car = Splay.ar(car * env);
+	OffsetOut.ar(out,
+		DirtPan.ar(car, ~dirt.numChannels, pan, amp)
+	);
+}).add;
+
 SynthDef(\fmpad, {| out, pan, freq = 40, modrate = 0.5, index = 1, patk = 0.001, plen = 0.0001, prate = 4, amp = 1, atk = 0.01, len = 4, sust = 1, detune = 0.1, curveRate = 4, cutoff = 2000, q = 0.1|
 	var env = EnvGen.kr(Env.adsr(atk, len, sust) , doneAction: 2);
 	var modEnv = EnvGen.kr(Env.perc(atk, len, index));
@@ -577,7 +741,7 @@ SynthDef(\fmkey, {| out, pan, freq = 40, modrate = 1, index = 2, patk = 0.0001, 
 }).add;
 
 
-SynthDef(\fmcp, {| out, pan, freq = 600, modrate = 4, index = 24, patk = 0.001, plen = 0.1, prate = 8, amp = 1.5, atk = 0.0001, len = 0.3, curveRate = 4, q = 0.5|
+SynthDef(\fmcp, {| out, pan, freq = 600, modrate = 4, index = 24, patk = 0.001, plen = 0.1, prate = 8, amp = 1.5, atk = 0.0001, len = 0.4, curveRate = 4, q = 0.5|
 	var env = EnvGen.kr(Env.perc(atk, len, curve: (-1.0 * curveRate)), doneAction: 2);
 	var pEnv = EnvGen.kr(Env.perc(patk, plen, prate));
 	var fr = 1000;
@@ -658,38 +822,38 @@ SynthDef(\swub2, {|out, pan, gate = 1, amp = 1, freq = 80, index = 32, modrate =
 	var snd;
 	var env = EnvGen.ar(Env([0,1,0], [0.001, len], -2), gate: gate, doneAction: 2);
 	var modEnv = EnvGen.ar(Env([0,1,0], [0.001, len], -4));
-	var array = [0.5, 1.5, 2.5, 3.5, 4.5 ];
-	array.postln;
+	var array = [0.5, 1.5, 2.5, 3.5, 4.5];
 	snd = SinOsc.ar(array * freq + SinOsc.ar(freq * modrate, mul: freq * modEnv.linexp(0, 1, 1, index) ));
 	snd.sum;
 	/*snd = [LPF.ar(snd, SinOsc.ar(12).linexp(-1,1,20, 20000), 0.3), LPF.ar(snd, SinOsc.ar(5).linexp(-1,1, 500, 20000), 0.3)];*/
 	snd = CombN.ar(snd, 0.1, 0.1, 0.2, 0.5) + snd;
 	snd = SoftClipAmp.ar(snd);
-	/*snd = RLPF.ar(
+	snd = CrossoverDistortion.ar(snd, 0.1, 0.5);
+	snd = RLPF.ar(
 		snd,
 		100 + EnvGen.ar(Env([0, cutoff, 0], [0.02, len], -2)),
 		( 0.01 + 1 - q )
-	);*/
+	);
 	snd = snd * env;
-	snd = snd * 0.6;
+	// snd = snd * 0.6;
 	OffsetOut.ar(out,
 		DirtPan.ar(snd, ~dirt.numChannels, pan, amp)
 	);
 }).add;
 
-SynthDef(\sbass, { |out, pan, amp = 1, gate = 1, freq = 32, len = 1, spd = 2.5, index = 3, modrate = 2 |
+SynthDef(\sbass, { |out, pan, amp = 1, gate = 1, freq = 32, len = 1, spd = 2.5, index = 3, modrate = 8 |
 	var fenv, env, snd;
 	// fenv = EnvGen.ar(Env([1, 4, 1], [0.001, 0.8], -4));
 	env = EnvGen.ar(Env([0,1,0], [0.0001, len], -4), gate: gate, doneAction: 2);
-	snd = SinOsc.ar(freq + SinOsc.ar(freq * modrate, 2pi).linlin(-1, 1, -80 * index, 80 * index), (2pi));
-	snd = SinOsc.ar(freq + SinOsc.ar(freq * modrate, (2pi * spd * (LFNoise1.ar(0.8).linlin(-1,1,1,64) / 64))).linlin(-1, 1, -80 * index, 80 * index), (2pi * 3 * (LFNoise1.kr(2).linlin(-1,1,1, 64) / 64)) );
+	snd = SinOsc.ar(freq + SinOsc.ar(freq * modrate, 2pi).linlin(-1, 1, -1 * freq * index, freq * index), (2pi));
+	snd = snd + SinOsc.ar(freq + SinOsc.ar(freq * modrate, (2pi * spd * (LFTri.kr(0.4).linlin(-1,1,1,64) / 64))).linlin(-1, 1, -1 * freq * index, freq * index), (2pi * 3 * (LFTri.kr(0.3).linlin(-1,1,1, 64) / 64)) );
 	snd = snd / 2;
-	snd = snd.fold2(1.2);
-	snd = snd.round(0.015);
+	// snd = snd.fold2(1.2);
+	snd = snd.round(0.01);
+	snd = CrossoverDistortion.ar(snd, 0.8, 1.0);
 	snd = snd * 2;
 	snd.tanh;
 	snd = snd * env;
-	snd = Pan2.ar(snd * 0.8);
 	OffsetOut.ar(out,
 		DirtPan.ar(snd, ~dirt.numChannels, pan, amp)
 	);

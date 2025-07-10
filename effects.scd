@@ -1,3 +1,5 @@
+//// custom global effects
+
 (
 var numChannels = ~dirt.numChannels;
 
@@ -49,12 +51,12 @@ var numChannels = ~dirt.numChannels;
 };
 );
 
-~dirt.modules;
+//// custom effects
+
 (
 
 var numChannels = ~dirt.numChannels;
 
-//custom effects
 
 // Spectral scramble
 ~dirt.addModule('bitcrush', { |dirtEvent|
